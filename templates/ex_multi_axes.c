@@ -315,7 +315,7 @@ void cyclic_task()
         if (counter) {
             counter--;
         } else { // do this at 1 Hz
-            counter = 1;
+            counter = FREQUENCY;
 
 
             printf("Target position: %f\n", move_value1);
@@ -410,35 +410,14 @@ void cyclic_task()
         temp[2] = status2;
 
 
-
-        // Check init error
-        if ((((error_flag1 == 1) & ((temp[1] & 0x006f) == 0x0028)) | 
-            ((error_flag2 == 1) & ((temp[2] & 0x006f) == 0x0028))) 
-            & (t_fault > 0.5))
-        {
-            printf("Duc dung roi\n");
-            EC_WRITE_U16(domain1_pd + off_controlword1, 0b10000000);
-            EC_WRITE_U16(domain2_pd + off_controlword2, 0b10000000);
-            error_flag1 = 0;
-            error_flag2 = 0;
-
-            state_machine1 = 2;
-            state_machine2 = 2;
-        }
-        else  if ((((temp[1] & 0x006f) == 0x0028) & (error_flag1 == 1)) | (((temp[2] & 0x006f) == 0x0028) & (error_flag2 == 1 ))) {
-            // Ready to switch on
-            EC_WRITE_U16(domain1_pd + off_controlword1, 0b00000000);
-            EC_WRITE_U16(domain2_pd + off_controlword2, 0b00000000);
-            t_fault += 0.001;
-
-            state_machine1 = 1;
-            state_machine2 = 1;
-        }
-
         
 
         // write process data
-        if ((temp[1] & 0x004f) == 0x0040) {
+        if ( (temp[1] & 0b00001000) == 0b00001000 )
+        {
+            EC_WRITE_U16(domain1_pd + off_controlword1, 0b10000000);
+        }
+        else if ((temp[1] & 0x004f) == 0x0040) {
             // Ready to switch on
             EC_WRITE_U16(domain1_pd + off_controlword1, 0x0006);
             state_machine1 = 3;
@@ -461,7 +440,11 @@ void cyclic_task()
         
 
         // write process data
-        if ((temp[2] & 0x004f) == 0x0040) {
+        if ( (temp[2] & 0b00001000) == 0b00001000 )
+        {
+            EC_WRITE_U16(domain2_pd + off_controlword2, 0b10000000);
+        }
+        else if ((temp[2] & 0x004f) == 0x0040) {
             // Ready to switch on
             state_machine2 = 3;
             EC_WRITE_U16(domain2_pd + off_controlword2, 0x0006);
@@ -480,6 +463,8 @@ void cyclic_task()
 
 
 
+
+
         if (((temp[1] & 0x006f) == 0x0027) & ((temp[2] & 0x006f) == 0x0027)) {
             // Operation fully enabled — send motion
             state_machine1 = 6;
@@ -494,6 +479,10 @@ void cyclic_task()
             EC_WRITE_S32(domain2_pd + off_target_position2, move_value2);
             EC_WRITE_U16(domain2_pd + off_controlword2, 0x001F);
         }
+
+
+
+
 
         if (sync_ref_counter) {
             sync_ref_counter--;

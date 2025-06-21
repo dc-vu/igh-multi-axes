@@ -49,15 +49,23 @@ static ec_domain_state_t domain_r_state = {};
 static ec_domain_t *domain_w = NULL;
 static ec_domain_state_t domain_w_state = {};
 
-static ec_slave_config_t *sc  = NULL;
-static ec_slave_config_state_t sc_state = {};
+static ec_slave_config_t *sc1  = NULL;
+// static ec_slave_config_state_t sc_state = {};
+
+static ec_slave_config_t *sc2  = NULL;
+// static ec_slave_config_state_t sc_state2 = {};
 /****************************************************************************/
 
 // process data
 static uint8_t *domain_r_pd = NULL;
 static uint8_t *domain_w_pd = NULL;
-#define servo1  		0,4
+#define servo1  		0,3
 #define servo1_code 	0x00000083, 0x00000005
+
+#define servo2  		0,4
+#define servo2_code 	0x00000083, 0x00000005
+
+
 
 int demlanlap = 0;
 double t = 0;
@@ -67,18 +75,22 @@ double t = 0;
 static unsigned int servo_flag =0;
 static unsigned int deactive;
 // offsets for PDO entries
-static unsigned int ctrl_word   ;
+static unsigned int ctrl_word1   ;
+static unsigned int ctrl_word2   ;
 // static unsigned int mode  ;
 // static unsigned int tar_torq    ;
 // static unsigned int max_torq    ;
-static unsigned int tar_pos    ;
+static unsigned int tar_pos1    ;
+static unsigned int tar_pos2    ;
 // static unsigned int max_speed  ;
 // static unsigned int touch_probe_func ;
 // static unsigned int tar_vel ;
 // static unsigned int error_code  ;
-static unsigned int status_word;
+static unsigned int status_word1;
+static unsigned int status_word2;
 // static unsigned int mode_display ;
-static unsigned int pos_act;
+static unsigned int pos_act1;
+static unsigned int pos_act2;
 // static unsigned int vel_act;
 // static unsigned int torq_act;
 // static unsigned int touch_probe_status;
@@ -90,11 +102,13 @@ static signed long temp[8]={};
 //rx pdo entry 
 const static ec_pdo_entry_reg_t domain_r_regs[] = 
 {
-        {servo1,servo1_code,0x6040,00,&ctrl_word              },
+        {servo1,servo1_code,0x6040,00,&ctrl_word1              },
+        {servo2,servo2_code,0x6040,00,&ctrl_word2              },
         // {servo1,servo1_code,0x6060,00,&mode                   },
         // {servo1,servo1_code,0x6071,00,&tar_torq               },
         // {servo1,servo1_code,0x6072,00,&max_torq               },
-        {servo1,servo1_code,0x607a,00,&tar_pos                },
+        {servo1,servo1_code,0x607a,00,&tar_pos1                },
+        {servo2,servo2_code,0x607a,00,&tar_pos2                },
         // {servo1,servo1_code,0x6080,00,&max_speed              },
         // {servo1,servo1_code,0x60b8,00,&touch_probe_func       },
         // {servo1,servo1_code,0x60ff,00,&tar_vel                },
@@ -105,9 +119,11 @@ const static ec_pdo_entry_reg_t domain_r_regs[] =
 const static ec_pdo_entry_reg_t domain_w_regs[] = 
 {
         // {servo1,servo1_code,0x603f,00,&error_code             },
-        {servo1,servo1_code,0x6041,00,&status_word            },
+        {servo1,servo1_code,0x6041,00,&status_word1            },
+        {servo2,servo2_code,0x6041,00,&status_word2            },
         // {servo1,servo1_code,0x6061,00,&mode_display           },
-        {servo1,servo1_code,0x6064,00,&pos_act                },
+        {servo1,servo1_code,0x6064,00,&pos_act1                },
+        {servo2,servo2_code,0x6064,00,&pos_act2                },
         // {servo1,servo1_code,0x606c,00,&vel_act                },
         // {servo1,servo1_code,0x6077,00,&torq_act               },
         // {servo1,servo1_code,0x60b9,00,&touch_probe_status     },
@@ -287,7 +303,8 @@ void cyclic_task()
    		ecrt_domain_process(domain_r);
    		ecrt_domain_process(domain_w);
 
-        temp[0]=EC_READ_U16(domain_w_pd + status_word);
+        temp[1]=EC_READ_U16(domain_w_pd + status_word1);
+        temp[2]=EC_READ_U16(domain_w_pd + status_word2);
         // temp[1]=EC_READ_S32(domain_w_pd + mode_display);
 
         if (counter) 
@@ -315,51 +332,80 @@ void cyclic_task()
 
 
 		// write process data
-
-        if ( (temp[0] & 0b00001000) == 0b00001000 )
+        if ( (temp[1] & 0b00001000) == 0b00001000 )
         {
-            EC_WRITE_U16(domain_r_pd+ctrl_word, 0b10000000);
+            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0b10000000);
         }
         else if(servo_flag==1)
 		{
-			//servo off
-            EC_WRITE_U16(domain_r_pd+ctrl_word, 0x0006);
+            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0006);
         }
-        else if( (temp[0]&0x004f) == 0x0040  )
+        else if( (temp[1]&0x004f) == 0x0040  )
 		{
-            EC_WRITE_U16(domain_r_pd+ctrl_word, 0x0006);
-            printf("Servo state 1");
+            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0006);
         }
 
-        else if( (temp[0]&0x006f) == 0x0021)
+        else if( (temp[1]&0x006f) == 0x0021)
 		{
-            EC_WRITE_U16(domain_r_pd+ctrl_word, 0x0007);
-            printf("Servo state 2");
+            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0007);
         }
         
-		else if( (temp[0]&0x006f) == 0x0023)
+		else if( (temp[1]&0x006f) == 0x0023)
 		{
-            EC_WRITE_U16(domain_r_pd+ctrl_word, 0x000f);
-            EC_WRITE_S32(domain_r_pd+tar_pos,0);
-            // EC_WRITE_S32(domain_r_pd+tar_vel, 0xffff);
-            // EC_WRITE_S32(domain_r_pd+max_torq, 0xf00);
+            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x000f);
+            EC_WRITE_S32(domain_r_pd+tar_pos1,0);
+        }
 
+
+        if ( (temp[2] & 0b00001000) == 0b00001000 )
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0b10000000);
+        }
+        else if(servo_flag==1)
+		{
+            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0006);
+        }
+        else if( (temp[2]&0x004f) == 0x0040  )
+		{
+            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0006);
+        }
+
+        else if( (temp[2]&0x006f) == 0x0021)
+		{
+            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0007);
+        }
+        
+		else if( (temp[2]&0x006f) == 0x0023)
+		{
+            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x000f);
+            EC_WRITE_S32(domain_r_pd+tar_pos2,0);
         }
 		
+
+
+
+
+
+
+
 		//operation enabled
-        else if( (temp[0]&0x006f) == 0x0027)        // this servo is on
+        if( ((temp[1]&0x006f) == 0x0027) & ((temp[2]&0x006f) == 0x0027))        // this servo is on
 		{
             t += 0.001; // increment time for simulation purposes
             move_value =   700000 * sin(2 * 3.14159 * 0.5 * t); // simulate a sine wave position
+
             // move
-            
-            EC_WRITE_S32(domain_r_pd+tar_pos, move_value); // set target position
-            EC_WRITE_U16(domain_r_pd+ctrl_word, 0x001f);
+            EC_WRITE_S32(domain_r_pd+tar_pos1, move_value); // set target position
+            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x001f);
+
+            EC_WRITE_S32(domain_r_pd+tar_pos2, move_value); // set target position
+            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x001f);
 
         }
 
-        // temp[1]=EC_READ_U32(domain_w_pd + pos_act);
-        // printf("Position actual value: %ld\n", temp[1]);
+
+
+
 
 		clock_gettime(CLOCK_TO_USE, &time);
 		ecrt_master_application_time(master, TIMESPEC2NS(time));
@@ -428,7 +474,13 @@ int main(int argc, char **argv)
 			
 	 	
 	    
-    if (!(sc = ecrt_master_slave_config(master, servo1, servo1_code))) 
+    if (!(sc1 = ecrt_master_slave_config(master, servo1, servo1_code))) 
+    {
+	fprintf(stderr, "Failed to get slave1 configuration.\n");
+        return -1;
+    }   
+
+    if (!(sc2 = ecrt_master_slave_config(master, servo2, servo2_code))) 
     {
 	fprintf(stderr, "Failed to get slave1 configuration.\n");
         return -1;
@@ -437,30 +489,15 @@ int main(int argc, char **argv)
 
 #if SDO_ACCESS
 
-    if (ecrt_slave_config_sdo8(sc, 0x6060, 0, 8))
+    if (ecrt_slave_config_sdo8(sc1, 0x6060, 0, 8))
     {
         return -1;
     }
 
-        if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))
+    if (ecrt_slave_config_sdo8(sc2, 0x6060, 0, 8))
     {
         return -1;
     }
-
-    if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))
-    {
-        return -1;
-    }
-    // static uint8_t sdo_value;
-    // size_t result_size;
-    // uint32_t abort_code;
-    // if (ecrt_master_sdo_upload(master, 0, 0x6060, 0, &sdo_value, sizeof(sdo_value), &result_size, &abort_code)) {
-    //     printf("Failed to read SDO 0x6060. Abort code: 0x%08X\n", abort_code);
-    //     ecrt_release_master(master);
-    //     return -1;
-    // }
-    // printf("SDO 0x6060 value: %u, Result size: %zu\n", sdo_value, result_size);
-
 
 #endif
 
@@ -469,7 +506,13 @@ int main(int argc, char **argv)
 
     printf("Configuring PDOs...\n");
 	
-    if (ecrt_slave_config_pdos(sc, EC_END, slave_0_syncs)) 
+    if (ecrt_slave_config_pdos(sc1, EC_END, slave_0_syncs)) 
+    {
+        fprintf(stderr, "Failed to configure 1st PDOs.\n");
+        return -1;
+    }
+
+    if (ecrt_slave_config_pdos(sc2, EC_END, slave_0_syncs)) 
     {
         fprintf(stderr, "Failed to configure 1st PDOs.\n");
         return -1;
@@ -491,7 +534,11 @@ int main(int argc, char **argv)
     	}
 		
 	
-	ecrt_slave_config_dc(sc,
+	ecrt_slave_config_dc(sc1,
+        0x0300,
+        1000000,4400000,0,0);  
+
+    ecrt_slave_config_dc(sc2,
         0x0300,
         1000000,4400000,0,0);  
 

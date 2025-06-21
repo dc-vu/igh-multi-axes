@@ -54,8 +54,6 @@ static ec_slave_config_t *sc2  = NULL;
 
 /****************************************************************************/
 
-
-
 // process data
 static uint8_t *domain1_pd = NULL;
 static uint8_t *domain2_pd = NULL;
@@ -80,13 +78,6 @@ static unsigned int off_controlword2 = 0;
 static unsigned int off_target_position2 = 0;
 static unsigned int off_statusword2 = 0;
 static unsigned int off_position_actual_value2 = 0;
-static unsigned int error_flag1 = 1;
-static unsigned int error_flag2 = 1;
-float t_fault = 0;
-
-uint8_t state_machine1 = 0;
-uint8_t state_machine2 = 0;
-
 
 static signed long temp[8]={};
 
@@ -315,71 +306,12 @@ void cyclic_task()
         if (counter) {
             counter--;
         } else { // do this at 1 Hz
-            counter = 1;
-
-
-            printf("Target position: %f\n", move_value1);
+            counter = FREQUENCY;
 
             // check for master state (optional)
             check_master_state();
 
-            if (state_machine1 == 1)
-            {
-                printf("State 1: Error detected!");
-            }
-            else if (state_machine1 == 2)
-            {
-                printf("State 1: Error resetting!");
-            }
-            else if (state_machine1 == 3)
-            {
-                printf("State 1: Ready to switch on!");
-            }
-            else if (state_machine1 == 4)
-            {
-                printf("State 1: Switched on");
-            }
-            else if (state_machine1 == 5)
-            {
-                printf("State 1: Operation enabled");
-            }
-            else if (state_machine1 == 6)
-            {
-                printf("State 1: In the loop");
-            }
-
-            printf("\n");
-
-            if (state_machine2 == 1)
-            {
-                printf("State 2: Error detected!");
-            }
-            else if (state_machine2 == 2)
-            {
-                printf("State 2: Error resetting!");
-            }
-            else if (state_machine2 == 3)
-            {
-                printf("State 2: Ready to switch on!");
-            }
-            else if (state_machine2 == 4)
-            {
-                printf("State 2: Switched on");
-            }
-            else if (state_machine2 == 5)
-            {
-                printf("State 2: Operation enabled");
-            }
-            else if (state_machine2 == 6)
-            {
-                printf("State 2: In the loop");
-            }
-
-            printf("\n");
-            
-
 #ifdef MEASURE_TIMING
-
             // output timing stats
             printf("period     %10u ... %10u\n",
                     period_min_ns, period_max_ns);
@@ -393,8 +325,6 @@ void cyclic_task()
             exec_min_ns = 0xffffffff;
             latency_max_ns = 0;
             latency_min_ns = 0xffffffff;
-            printf("============================\n");
-
 #endif
 
             // calculate new process data
@@ -405,89 +335,48 @@ void cyclic_task()
         uint16_t status1 = EC_READ_U16(domain1_pd + off_statusword1);
         temp[1] = status1;
 
-        // Read process data domain2
-        uint16_t status2 = EC_READ_U16(domain2_pd + off_statusword2);
-        temp[2] = status2;
-
-
-
-        // Check init error
-        if ((((error_flag1 == 1) & ((temp[1] & 0x006f) == 0x0028)) | 
-            ((error_flag2 == 1) & ((temp[2] & 0x006f) == 0x0028))) 
-            & (t_fault > 0.5))
-        {
-            printf("Duc dung roi\n");
-            EC_WRITE_U16(domain1_pd + off_controlword1, 0b10000000);
-            EC_WRITE_U16(domain2_pd + off_controlword2, 0b10000000);
-            error_flag1 = 0;
-            error_flag2 = 0;
-
-            state_machine1 = 2;
-            state_machine2 = 2;
-        }
-        else  if ((((temp[1] & 0x006f) == 0x0028) & (error_flag1 == 1)) | (((temp[2] & 0x006f) == 0x0028) & (error_flag2 == 1 ))) {
-            // Ready to switch on
-            EC_WRITE_U16(domain1_pd + off_controlword1, 0b00000000);
-            EC_WRITE_U16(domain2_pd + off_controlword2, 0b00000000);
-            t_fault += 0.001;
-
-            state_machine1 = 1;
-            state_machine2 = 1;
-        }
-
-        
-
         // write process data
         if ((temp[1] & 0x004f) == 0x0040) {
             // Ready to switch on
             EC_WRITE_U16(domain1_pd + off_controlword1, 0x0006);
-            state_machine1 = 3;
         }
         else if ((temp[1] & 0x006f) == 0x0021) {
             // Switched on
             EC_WRITE_U16(domain1_pd + off_controlword1, 0x0007);
-            state_machine1 = 4;
         }
         else if ((temp[1] & 0x006f) == 0x0023) {
             // Operation enabled, write initial target
             EC_WRITE_U16(domain1_pd + off_controlword1, 0x000F);
             EC_WRITE_S32(domain1_pd + off_target_position1, 0);
-
-            state_machine1 = 5;
         }
 
 
         //
-        
+        // Read process data domain2
+        uint16_t status2 = EC_READ_U16(domain2_pd + off_statusword2);
+        temp[2] = status2;
 
         // write process data
         if ((temp[2] & 0x004f) == 0x0040) {
             // Ready to switch on
-            state_machine2 = 3;
             EC_WRITE_U16(domain2_pd + off_controlword2, 0x0006);
         }
         else if ((temp[2] & 0x006f) == 0x0021) {
             // Switched on
-            state_machine2 = 4;
             EC_WRITE_U16(domain2_pd + off_controlword2, 0x0007);
         }
         else if ((temp[2] & 0x006f) == 0x0023) {
             // Operation enabled, write initial target
-            state_machine2 = 5;
             EC_WRITE_U16(domain2_pd + off_controlword2, 0x000F);
             EC_WRITE_S32(domain2_pd + off_target_position2, 0);
         }
 
 
-
         if (((temp[1] & 0x006f) == 0x0027) & ((temp[2] & 0x006f) == 0x0027)) {
             // Operation fully enabled — send motion
-            state_machine1 = 6;
-            state_machine2 = 6;
-
             move_value1 += 5000;
             move_value2 = -move_value1;
-
+            printf("%f\n", move_value1);
             EC_WRITE_S32(domain1_pd + off_target_position1, move_value1);
             EC_WRITE_U16(domain1_pd + off_controlword1, 0x001F);
 
@@ -574,15 +463,15 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    // if (ecrt_slave_config_sdo16(sc1, 0x3329, 0, 99))
-    // {
-    //     return -1;
-    // }
+    if (ecrt_slave_config_sdo16(sc1, 0x3329, 0, 99))
+    {
+        return -1;
+    }
 
-    // if (ecrt_slave_config_sdo16(sc2, 0x3329, 0, 99))
-    // {
-    //     return -1;
-    // }
+    if (ecrt_slave_config_sdo16(sc2, 0x3329, 0, 99))
+    {
+        return -1;
+    }
 
 #if CONFIGURE_PDOS
 

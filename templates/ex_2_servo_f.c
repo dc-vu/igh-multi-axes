@@ -26,7 +26,7 @@
 #define PDO_SETTING	1
 #define SDO_ACCESS      1
 
-// #define MEASURE_TIMING
+#define MEASURE_TIMING
 
 /****************************************************************************/
 
@@ -49,26 +49,23 @@ static ec_domain_state_t domain_r_state = {};
 static ec_domain_t *domain_w = NULL;
 static ec_domain_state_t domain_w_state = {};
 
-static ec_slave_config_t *sc1  = NULL;
-// static ec_slave_config_state_t sc_state = {};
-
-static ec_slave_config_t *sc2  = NULL;
-// static ec_slave_config_state_t sc_state2 = {};
+// static ec_slave_config_t *sc  = NULL;
+static ec_slave_config_state_t sc_state = {};
 /****************************************************************************/
 
 // process data
 static uint8_t *domain_r_pd = NULL;
 static uint8_t *domain_w_pd = NULL;
-#define servo1  		0,0
+#define servo1  		0,4
 #define servo1_code 	0x00000083, 0x00000005
 
-#define servo2  		0,1
+#define servo2  		0,6
 #define servo2_code 	0x00000083, 0x00000005
-
-
 
 int demlanlap = 0;
 double t = 0;
+uint8_t servo1_ON = 0;
+uint8_t servo2_ON = 0;
 /***************************************************************************/
 
 //signal to turn off servo on state
@@ -76,26 +73,36 @@ static unsigned int servo_flag =0;
 static unsigned int deactive;
 // offsets for PDO entries
 static unsigned int ctrl_word1   ;
-static unsigned int ctrl_word2   ;
 // static unsigned int mode  ;
 // static unsigned int tar_torq    ;
 // static unsigned int max_torq    ;
 static unsigned int tar_pos1    ;
-static unsigned int tar_pos2    ;
 // static unsigned int max_speed  ;
 // static unsigned int touch_probe_func ;
 // static unsigned int tar_vel ;
 // static unsigned int error_code  ;
 static unsigned int status_word1;
-static unsigned int status_word2;
 // static unsigned int mode_display ;
 static unsigned int pos_act1;
-static unsigned int pos_act2;
 // static unsigned int vel_act;
 // static unsigned int torq_act;
 // static unsigned int touch_probe_status;
 // static unsigned int touch_probe_pos;
 // static unsigned int digital_input;
+
+
+static unsigned int ctrl_word2   ;
+// static unsigned int mode  ;
+// static unsigned int tar_torq    ;
+// static unsigned int max_torq    ;
+static unsigned int tar_pos2    ;
+// static unsigned int max_speed  ;
+// static unsigned int touch_probe_func ;
+// static unsigned int tar_vel ;
+// static unsigned int error_code  ;
+static unsigned int status_word2;
+// static unsigned int mode_display ;
+static unsigned int pos_act2;
 
 static signed long temp[8]={};
 
@@ -303,9 +310,6 @@ void cyclic_task()
    		ecrt_domain_process(domain_r);
    		ecrt_domain_process(domain_w);
 
-        temp[1]=EC_READ_U16(domain_w_pd + status_word1);
-        temp[2]=EC_READ_U16(domain_w_pd + status_word2);
-        // temp[1]=EC_READ_S32(domain_w_pd + mode_display);
 
         if (counter) 
 		{
@@ -315,6 +319,7 @@ void cyclic_task()
 		{ // do this at 1 Hz
             counter = FREQUENCY;
 			check_master_state();
+
 #ifdef MEASURE_TIMING
             printf("period     %10u ... %10u\n", period_min_ns, period_max_ns);
             printf("exec       %10u ... %10u\n", exec_min_ns, exec_max_ns);
@@ -325,79 +330,106 @@ void cyclic_task()
             exec_min_ns = 0xffffffff;
             latency_max_ns = 0;
             latency_min_ns = 0xffffffff;
+
+
             printf("============================\n");
+            printf("Servo status \n");
+            
+            if (servo1_ON == 1)
+            {
+                printf("Servo 1 is on     ");
+            }
+            if (servo1_ON == 1)
+            {
+                printf("Servo 2 is on     ");
+            }
+            
+            printf("\n============================\n");
 #endif
             blink = !blink;
         }
 
 
-		// write process data
-        if(servo_flag==1)
-		{
-            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0006);
-        }
-        else if( (temp[1]&0x004f) == 0x0040  )
-		{
-            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0006);
-        }
+        temp[0]=EC_READ_U16(domain_w_pd + status_word1);
+        temp[1]=EC_READ_U16(domain_w_pd + status_word2);
 
-        else if( (temp[1]&0x006f) == 0x0021)
+
+		// write process data
+
+        if ( (temp[0] & 0b00001000) == 0b00001000 )
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0b10000000);
+        }
+        else if(servo_flag==1)
+		{
+            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0006);
+        }
+        else if( (temp[0]&0x004f) == 0x0040  )
+		{
+            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0006);
+        }
+        else if( (temp[0]&0x006f) == 0x0021)
 		{
             EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0007);
         }
-        
-		else if( (temp[1]&0x006f) == 0x0023)
+		else if( (temp[0]&0x006f) == 0x0023)
 		{
             EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x000f);
             EC_WRITE_S32(domain_r_pd+tar_pos1,0);
         }
+        else if( (temp[0]&0x006f) == 0x0027)        // this servo is on
+		{
+            servo1_ON = 1;
+        }
 
 
-        if(servo_flag==1)
+
+        if ( (temp[1] & 0b00001000) == 0b00001000 )
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0b10000000);
+        }
+        else if(servo_flag==1)
 		{
             EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0006);
         }
-        else if( (temp[2]&0x004f) == 0x0040  )
+        else if( (temp[1]&0x004f) == 0x0040  )
 		{
             EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0006);
         }
-
-        else if( (temp[2]&0x006f) == 0x0021)
+        else if( (temp[1]&0x006f) == 0x0021)
 		{
             EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0007);
         }
-        
-		else if( (temp[2]&0x006f) == 0x0023)
+		else if( (temp[1]&0x006f) == 0x0023)
 		{
             EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x000f);
             EC_WRITE_S32(domain_r_pd+tar_pos2,0);
         }
-		
-
-
-
-
-
-
-
-		//operation enabled
-        if( ((temp[1]&0x006f) == 0x0027) & ((temp[2]&0x006f) == 0x0027))        // this servo is on
+        else if( (temp[1]&0x006f) == 0x0027)        // this servo is on
 		{
-            t += 0.001; // increment time for simulation purposes
-            move_value =   700000 * sin(2 * 3.14159 * 0.5 * t); // simulate a sine wave position
-
-            // move
-            EC_WRITE_S32(domain_r_pd+tar_pos1, move_value); // set target position
-            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x001f);
-
-            EC_WRITE_S32(domain_r_pd+tar_pos2, move_value); // set target position
-            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x001f);
-
+            servo2_ON = 1;
         }
 
 
 
+        if ((servo1_ON == 1) && (servo2_ON == 1))
+        {
+            // EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x001f);
+            // EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x001f);
 
+            t += 0.001; // increment time for simulation purposes
+            move_value =   700000 * sin(2 * 3.14159 * 0.5 * t); // simulate a sine wave position
+            // move
+            
+            EC_WRITE_S32(domain_r_pd+tar_pos1, move_value); // set target position
+            EC_WRITE_S32(domain_r_pd+tar_pos2, move_value); // set target position
+            
+        }
+
+
+
+        // temp[1]=EC_READ_U32(domain_w_pd + pos_act1);
+        // printf("Position actual value: %ld\n", temp[1]);
 
 		clock_gettime(CLOCK_TO_USE, &time);
 		ecrt_master_application_time(master, TIMESPEC2NS(time));
@@ -440,7 +472,8 @@ void cyclic_task()
 
 int main(int argc, char **argv)
 {
-    ec_slave_config_t *sc;
+    ec_slave_config_t *sc1;
+    ec_slave_config_t *sc2;
 	
 	
     if (mlockall(MCL_CURRENT | MCL_FUTURE) == -1) 
@@ -471,7 +504,6 @@ int main(int argc, char **argv)
 	fprintf(stderr, "Failed to get slave1 configuration.\n");
         return -1;
     }   
-
     if (!(sc2 = ecrt_master_slave_config(master, servo2, servo2_code))) 
     {
 	fprintf(stderr, "Failed to get slave1 configuration.\n");
@@ -486,20 +518,40 @@ int main(int argc, char **argv)
         return -1;
     }
 
+        if (ecrt_slave_config_sdo32(sc1, 0x3328, 0, 16000000))
+    {
+        return -1;
+    }
+
+    if (ecrt_slave_config_sdo32(sc1, 0x6065, 0, 0xFFFFFFFF))
+    {
+        return -1;
+    }
+
+
     if (ecrt_slave_config_sdo8(sc2, 0x6060, 0, 8))
     {
         return -1;
     }
 
-    static uint8_t sdo_value;
-    size_t result_size;
-    uint32_t abort_code;
-    if (ecrt_master_sdo_upload(master, 0, 0x6060, 0, &sdo_value, sizeof(sdo_value), &result_size, &abort_code)) {
-        printf("Failed to read SDO 0x6060. Abort code: 0x%08X\n", abort_code);
-        ecrt_release_master(master);
+        if (ecrt_slave_config_sdo32(sc2, 0x3328, 0, 16000000))
+    {
         return -1;
     }
-    printf("SDO 0x6060 value: %u, Result size: %zu\n", sdo_value, result_size);
+
+    if (ecrt_slave_config_sdo32(sc2, 0x6065, 0, 0xFFFFFFFF))
+    {
+        return -1;
+    }
+    // static uint8_t sdo_value;
+    // size_t result_size;
+    // uint32_t abort_code;
+    // if (ecrt_master_sdo_upload(master, 0, 0x6060, 0, &sdo_value, sizeof(sdo_value), &result_size, &abort_code)) {
+    //     printf("Failed to read SDO 0x6060. Abort code: 0x%08X\n", abort_code);
+    //     ecrt_release_master(master);
+    //     return -1;
+    // }
+    // printf("SDO 0x6060 value: %u, Result size: %zu\n", sdo_value, result_size);
 
 
 #endif
@@ -540,7 +592,6 @@ int main(int argc, char **argv)
 	ecrt_slave_config_dc(sc1,
         0x0300,
         1000000,4400000,0,0);  
-
     ecrt_slave_config_dc(sc2,
         0x0300,
         1000000,4400000,0,0);  
