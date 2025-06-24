@@ -358,7 +358,7 @@ void cyclic_task()
             //     EC_WRITE_S32(domain_r_pd+tar_pos, 0);
             // }
             t += 0.001; // increment time for simulation purposes
-            move_value =   30 * sin(2 * 3.14159 * 0.5 * t); // simulate a sine wave position
+            move_value =   50 * sin(2 * 3.14159 * 0.5 * t); // simulate a sine wave position
             // move
             
             EC_WRITE_S16(domain_r_pd+tar_pos, move_value); // set target position
