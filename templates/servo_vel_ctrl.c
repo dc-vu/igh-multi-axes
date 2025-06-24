@@ -56,7 +56,7 @@ static ec_slave_config_state_t sc_state = {};
 // process data
 static uint8_t *domain_r_pd = NULL;
 static uint8_t *domain_w_pd = NULL;
-#define servo1  		0,4
+#define servo1  		0,1
 #define servo1_code 	0x00000083, 0x00000005
 
 int demlanlap = 0;
@@ -442,15 +442,6 @@ int main(int argc, char **argv)
         return -1;
     }
 
-        if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))
-    {
-        return -1;
-    }
-
-    if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))
-    {
-        return -1;
-    }
 
         if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1702))
     {

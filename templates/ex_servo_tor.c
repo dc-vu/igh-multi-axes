@@ -20,10 +20,10 @@
 // Application parameters
 #define FREQUENCY 1000
 #define CLOCK_TO_USE CLOCK_REALTIME
-#define CONFIGURE_PDOS 0
+#define CONFIGURE_PDOS 1
 
 // Optional features
-#define PDO_SETTING	0
+#define PDO_SETTING	1
 #define SDO_ACCESS      1
 
 #define MEASURE_TIMING
@@ -136,16 +136,20 @@ const struct timespec cycletime = {0, PERIOD_NS};
  * Revision number: 0x00020001
  */
 
- ec_pdo_entry_info_t slave_0_pdo_entries[] = {
+ec_pdo_entry_info_t slave_0_pdo_entries[] = {
     {0x6040, 0x00, 16}, /* Controlword */
-    {0x607a, 0x00, 32}, /* Target position */
+    {0x607a, 0x00, 32}, 
+    {0x60ff, 0x00, 32}, 
+    {0x6071, 0x00, 16}, /* Target torque */
+    {0x6060, 0x00, 8},  /* Modes of operation */
     {0x60b8, 0x00, 16}, /* Touch probe function */
-    {0x60fe, 0x01, 32}, /* Physical outputs */
+    {0x607f, 0x00, 32}, 
+
     {0x603f, 0x00, 16}, /* Error code */
     {0x6041, 0x00, 16}, /* Statusword */
-    {0x6064, 0x00, 32}, /* Position actual value */
+    {0x6064, 0x00, 32}, 
     {0x6077, 0x00, 16}, /* Torque actual value */
-    {0x60f4, 0x00, 32}, /* Following error actual value */
+    {0x6061, 0x00, 8},  /* Modes of operation display */
     {0x60b9, 0x00, 16}, /* Touch probe status */
     {0x60ba, 0x00, 32}, /* Touch probe pos1 pos value */
     {0x60bc, 0x00, 32}, /* Touch probe pos2 pos value */
@@ -153,15 +157,16 @@ const struct timespec cycletime = {0, PERIOD_NS};
 };
 
 ec_pdo_info_t slave_0_pdos[] = {
-    {0x1701, 4, slave_0_pdo_entries + 0}, /* 258th receive PDO Mapping */
-    {0x1b01, 9, slave_0_pdo_entries + 4}, /* 258th transmit PDO Mapping */
+    {0x1600, 7, slave_0_pdo_entries + 0},  /* RxPDO: Controlword + Target torque + Mode + Touch probe */
+    {0x1A00, 9, slave_0_pdo_entries + 7},  /* TxPDO: các phản hồi */
 };
+
 
 ec_sync_info_t slave_0_syncs[] = {
     {0, EC_DIR_OUTPUT, 0, NULL, EC_WD_DISABLE},
     {1, EC_DIR_INPUT, 0, NULL, EC_WD_DISABLE},
-    {2, EC_DIR_OUTPUT, 1, slave_0_pdos + 0, EC_WD_ENABLE},
-    {3, EC_DIR_INPUT, 1, slave_0_pdos + 1, EC_WD_DISABLE},
+    {2, EC_DIR_OUTPUT, 1, slave_0_pdos + 0, EC_WD_ENABLE},   // RxPDO 1702h
+    {3, EC_DIR_INPUT, 1, slave_0_pdos + 1, EC_WD_DISABLE},  // TxPDO 1B02h
     {0xff}
 };
 
@@ -452,27 +457,15 @@ int main(int argc, char **argv)
         return -1;
     }
 
-        if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1702))
+        if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))
     {
         return -1;
     }
 
-    if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1B02))
+    if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))
     {
         return -1;
     }
-
-    // static uint8_t sdo_value;
-    // size_t result_size;
-    // uint32_t abort_code;
-    // if (ecrt_master_sdo_upload(master, 0, 0x6060, 0, &sdo_value, sizeof(sdo_value), &result_size, &abort_code)) {
-    //     printf("Failed to read SDO 0x6060. Abort code: 0x%08X\n", abort_code);
-    //     ecrt_release_master(master);
-    //     return -1;
-    // }
-    // printf("SDO 0x6060 value: %u, Result size: %zu\n", sdo_value, result_size);
-
-
 #endif
 
  
