@@ -4,7 +4,7 @@ CC = gcc
 CFLAGS = -I/opt/etherlab/include -Ilib -O2
 LDFLAGS = -L/opt/etherlab/lib -lethercat -Wl,--rpath -Wl,/opt/etherlab/lib -lm
 
-TARGET = build/ex_6_servo_torque_v5
+TARGET = build/ex_IO
 
 # SRC = main_test_omron.c
 # SRC = templates/main_omron_2_servo.c
@@ -17,7 +17,7 @@ TARGET = build/ex_6_servo_torque_v5
 # SRC = src/ec_print.c templates/ex_getInfo.c 
 SRC = src/ec_print.c templates/ex_6_servo_torque_v5.c
 # SRC = src/ec_print.c templates/ex_6_servo_torque.c
-
+SRC = src/ec_print.c templates/ex_IO.c
 
 all: $(TARGET)
 

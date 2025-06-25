@@ -32,7 +32,7 @@ void ec_print_row_hex(const char* pdo_name,
                   int d1, int d2, int d3,
                   int d4, int d5, int d6)
 {
-    printf("| %-19s|", pdo_name);
+    printf("| %-18s|", pdo_name);
     printf("   0x%04X    |", d1);
     printf("   0x%04X    |", d2);
     printf("   0x%04X    |", d3);
@@ -45,7 +45,7 @@ void ec_print_row_float(const char* pdo_name,
                         float f1, float f2, float f3,
                         float f4, float f5, float f6)
 {
-    printf("| %-13s|", pdo_name);
+    printf("| %-18s|", pdo_name);
     printf(" %10.5f  |", f1);
     printf(" %10.5f  |", f2);
     printf(" %10.5f  |", f3);
