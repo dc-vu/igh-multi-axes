@@ -467,6 +467,11 @@ int main(int argc, char **argv)
     {
         return -1;
     }
+
+    if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))
+    {
+        return -1;
+    }
     // static uint8_t sdo_value;
     // size_t result_size;
     // uint32_t abort_code;

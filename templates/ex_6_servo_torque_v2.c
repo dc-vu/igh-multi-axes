@@ -12,10 +12,12 @@
 #include <sys/mman.h>
 #include <malloc.h>
 #include "ecrt.h"
+
 #include <math.h>
 
 #include <sched.h> /* sched_setscheduler() */
 
+#include "ec_print.h"
 
 // Application parameters
 #define FREQUENCY 1000
@@ -26,7 +28,7 @@
 #define PDO_SETTING	1
 #define SDO_ACCESS      1
 
-// #define MEASURE_TIMING
+#define MEASURE_TIMING
 
 /****************************************************************************/
 
@@ -75,15 +77,15 @@ static uint8_t *domain_w_pd = NULL;
 #define servo6  		0,5
 #define servo6_code 	0x00000083, 0x00000005
 
-int demlanlap = 0;
-double t = 0;
+
 /***************************************************************************/
 
 //signal to turn off servo on state
+double t = 0;
+
 static unsigned int servo_flag =0;
 static unsigned int deactive;
 
-static unsigned int mode_display;
 static unsigned int pos_act;
 
 static unsigned int status_word1;
@@ -114,8 +116,17 @@ static unsigned int mode4;
 static unsigned int mode5;
 static unsigned int mode6;
 
+static unsigned int mode_disp1;
+static unsigned int mode_disp2;
+static unsigned int mode_disp3;
+static unsigned int mode_disp4;
+static unsigned int mode_disp5;
+static unsigned int mode_disp6;
+
 
 static signed long temp[8]={};
+static signed long mode_disp[8]={};
+
 
 //rx pdo entry 
 const static ec_pdo_entry_reg_t domain_r_regs[] = 
@@ -153,7 +164,12 @@ const static ec_pdo_entry_reg_t domain_w_regs[] =
         {servo5,servo5_code,0x6041,00,&status_word5},
         {servo6,servo6_code,0x6041,00,&status_word6},
 
-        {servo1,servo1_code,0x6061,00,&mode_display},
+        {servo1,servo1_code,0x6061,00,&mode_disp1},
+        {servo2,servo2_code,0x6061,00,&mode_disp2},
+        {servo3,servo3_code,0x6061,00,&mode_disp3},
+        {servo4,servo4_code,0x6061,00,&mode_disp4},
+        {servo5,servo5_code,0x6061,00,&mode_disp5},
+        {servo6,servo6_code,0x6061,00,&mode_disp6},
         {}
 };
 
@@ -327,35 +343,12 @@ void cyclic_task()
         period_ns  = DIFF_NS(lastStartTime, startTime);
 #endif
 		
+
 		// writter_receive(master);
  	   	ecrt_master_receive(master);
    		ecrt_domain_process(domain_r);
    		ecrt_domain_process(domain_w);
 
-        
-
-        if (counter) 
-		{
-            counter--;
-        } 	
-		else 
-		{ // do this at 1 Hz
-            counter = FREQUENCY;
-			check_master_state();
-#ifdef MEASURE_TIMING
-            printf("period     %10u ... %10u\n", period_min_ns, period_max_ns);
-            printf("exec       %10u ... %10u\n", exec_min_ns, exec_max_ns);
-            printf("latency    %10u ... %10u\n", latency_min_ns, latency_max_ns);
-            period_max_ns = 0;
-            period_min_ns = 0xffffffff;
-            exec_max_ns = 0;
-            exec_min_ns = 0xffffffff;
-            latency_max_ns = 0;
-            latency_min_ns = 0xffffffff;
-            printf("============================\n");
-#endif
-            blink = !blink;
-        }
 
 
         temp[0]=EC_READ_U16(domain_w_pd + status_word1); // read 0x6041
@@ -365,44 +358,116 @@ void cyclic_task()
         temp[4]=EC_READ_U16(domain_w_pd + status_word5); // read 0x6041
         temp[5]=EC_READ_U16(domain_w_pd + status_word6); // read 0x6041
 
+        mode_disp[0]=EC_READ_U8(domain_w_pd + mode_disp1); // read 0x6061
+        mode_disp[1]=EC_READ_U8(domain_w_pd + mode_disp2); // read 0x6061
+        mode_disp[2]=EC_READ_U8(domain_w_pd + mode_disp3); // read 0x6061
+        mode_disp[3]=EC_READ_U8(domain_w_pd + mode_disp4); // read 0x6061
+        mode_disp[4]=EC_READ_U8(domain_w_pd + mode_disp5); // read 0x6061
+        mode_disp[5]=EC_READ_U8(domain_w_pd + mode_disp6); // read 0x6061
 
-        if (((temp[0] & 0x004f) == 0x0040) & ((temp[1] & 0x004f) == 0x0040) & ((temp[2] & 0x004f) == 0x0040)
-            & ((temp[3] & 0x004f) == 0x0040) & ((temp[4] & 0x004f) == 0x0040) & ((temp[5] & 0x004f) == 0x0040))
+
+
+
+        // First step Switched on ALL servo motors
+        // for servo 1
+        if ( (temp[0] & 0b00001000) == 0b00001000 )
         {
-            printf("State 1\n");
-
-            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word3, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word4, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word5, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word6, 0x0006);
-            
+            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0b10000000);
         }
-        if (((temp[0] & 0x006f) == 0x0021) & ((temp[1] & 0x006f) == 0x0021) & ((temp[2] & 0x006f) == 0x0021)
-            & ((temp[3] & 0x006f) == 0x0021) & ((temp[4] & 0x006f) == 0x0021) & ((temp[5] & 0x006f) == 0x0021))
+        else if ((temp[0] & 0x004f) == 0x0040)
         {
-            printf("State 2\n");
-
+            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0006);
+        }
+        else if ((temp[0] & 0x006f) == 0x0021)
+        {
             EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0007);
-            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0007);
-            EC_WRITE_U16(domain_r_pd+ctrl_word3, 0x0007);
-            EC_WRITE_U16(domain_r_pd+ctrl_word4, 0x0007);
-            EC_WRITE_U16(domain_r_pd+ctrl_word5, 0x0007);
-            EC_WRITE_U16(domain_r_pd+ctrl_word6, 0x0007);
-
             EC_WRITE_U8(domain_r_pd+mode1, 10);
+        }
+        
+        // for servo 2
+        if ( (temp[1] & 0b00001000) == 0b00001000 )
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0b10000000);
+        }
+        else if ((temp[1] & 0x004f) == 0x0040)
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0006);
+        }
+        else if ((temp[1] & 0x006f) == 0x0021)
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0007);
             EC_WRITE_U8(domain_r_pd+mode2, 10);
+        }
+
+        // for servo 3
+        if ( (temp[2] & 0b00001000) == 0b00001000 )
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word3, 0b10000000);
+        }
+        else if ((temp[2] & 0x004f) == 0x0040)
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word3, 0x0006);
+        }
+        else if ((temp[2] & 0x006f) == 0x0021)
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word3, 0x0007);
             EC_WRITE_U8(domain_r_pd+mode3, 10);
+        }
+
+        // for servo 4
+        if ( (temp[3] & 0b00001000) == 0b00001000 )
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word4, 0b10000000);
+        }
+        else if ((temp[3] & 0x004f) == 0x0040)
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word4, 0x0006);
+        }
+        else if ((temp[3] & 0x006f) == 0x0021)
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word4, 0x0007);
             EC_WRITE_U8(domain_r_pd+mode4, 10);
-            EC_WRITE_U8(domain_r_pd+mode5, 10);
+        }
+
+        // for servo 5
+        if ( (temp[4] & 0b00001000) == 0b00001000 )
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word5, 0b10000000);
+        }
+        else if ((temp[4] & 0x004f) == 0x0040)
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word5, 0x0006);
+        }
+        else if ((temp[4] & 0x006f) == 0x0021)
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word5, 0x0007);
+            EC_WRITE_U8(domain_r_pd+mode5, 10); 
+        }
+
+
+        // for servo 6
+        if ( (temp[5] & 0b00001000) == 0b00001000 )
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word6, 0b10000000);
+        }
+        else if ((temp[5] & 0x004f) == 0x0040)
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word6, 0x0006);
+        }
+        else if ((temp[5] & 0x006f) == 0x0021)
+        {
+            EC_WRITE_U16(domain_r_pd+ctrl_word6, 0x0007);
             EC_WRITE_U8(domain_r_pd+mode6, 10);
         }
+
+
+
+
+        // Now we turn ON all servo motors at the same time 
+
         if(((temp[0]&0x006f) == 0x0023) & ((temp[1]&0x006f) == 0x0023) & ((temp[2]&0x006f) == 0x0023)
             & ((temp[3]&0x006f) == 0x0023) & ((temp[4]&0x006f) == 0x0023) & ((temp[5]&0x006f) == 0x0023))
         {
-            printf("State 3\n");
-
             EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x000f);
             EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x000f);
             EC_WRITE_U16(domain_r_pd+ctrl_word3, 0x000f);
@@ -410,10 +475,9 @@ void cyclic_task()
             EC_WRITE_U16(domain_r_pd+ctrl_word5, 0x000f);
             EC_WRITE_U16(domain_r_pd+ctrl_word6, 0x000f);
         }
-        if( (temp[0]&0x006f) == 0x0027)        // this servo is on
+        if(((temp[0]&0x006f) == 0x0027) & ((temp[1]&0x006f) == 0x0027) & ((temp[2]&0x006f) == 0x0027)
+            & ((temp[3]&0x006f) == 0x0027) & ((temp[4]&0x006f) == 0x0027) & ((temp[5]&0x006f) == 0x0027))        // this servo is on
         {
-            printf("State 4\n");
-
             EC_WRITE_U8(domain_r_pd+mode1, 10);
             EC_WRITE_U8(domain_r_pd+mode2, 10);
             EC_WRITE_U8(domain_r_pd+mode3, 10);
@@ -441,7 +505,36 @@ void cyclic_task()
         }
         // printf("Mode: %d\n", disp_mode)
 
+        
 
+        if (counter) 
+		{
+            counter--;
+        } 	
+		else 
+		{ // do this at 1 Hz
+            counter = FREQUENCY;
+			check_master_state();
+#ifdef MEASURE_TIMING
+            ec_clear_console();
+            printf("period     %10u ... %10u\n", period_min_ns, period_max_ns);
+            printf("exec       %10u ... %10u\n", exec_min_ns, exec_max_ns);
+            printf("latency    %10u ... %10u\n", latency_min_ns, latency_max_ns);
+            period_max_ns = 0;
+            period_min_ns = 0xffffffff;
+            exec_max_ns = 0;
+            exec_min_ns = 0xffffffff;
+            latency_max_ns = 0;
+            latency_min_ns = 0xffffffff;
+            ec_print_header();
+            ec_print_row_hex("Status",
+                temp[0], temp[1], temp[2],
+                temp[3], temp[4], temp[5]);
+            ec_print_line();
+            
+#endif
+            blink = !blink;
+        }
 
 		clock_gettime(CLOCK_TO_USE, &time);
 		ecrt_master_application_time(master, TIMESPEC2NS(time));
