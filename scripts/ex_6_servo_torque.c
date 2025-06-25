@@ -332,14 +332,7 @@ void cyclic_task()
    		ecrt_domain_process(domain_r);
    		ecrt_domain_process(domain_w);
 
-        temp[0]=EC_READ_U16(domain_w_pd + status_word1); // read 0x6041
-        temp[1]=EC_READ_U16(domain_w_pd + status_word2); // read 0x6041
-        temp[2]=EC_READ_U16(domain_w_pd + status_word3); // read 0x6041
-        temp[3]=EC_READ_U16(domain_w_pd + status_word4); // read 0x6041
-        temp[4]=EC_READ_U16(domain_w_pd + status_word5); // read 0x6041
-        temp[5]=EC_READ_U16(domain_w_pd + status_word6); // read 0x6041
-
-
+        
 
         if (counter) 
 		{
@@ -370,44 +363,65 @@ void cyclic_task()
         }
 
 
+        temp[0]=EC_READ_U16(domain_w_pd + status_word1); // read 0x6041
+        temp[1]=EC_READ_U16(domain_w_pd + status_word2); // read 0x6041
+        temp[2]=EC_READ_U16(domain_w_pd + status_word3); // read 0x6041
+        temp[3]=EC_READ_U16(domain_w_pd + status_word4); // read 0x6041
+        temp[4]=EC_READ_U16(domain_w_pd + status_word5); // read 0x6041
+        temp[5]=EC_READ_U16(domain_w_pd + status_word6); // read 0x6041
+
 
         if ( (temp[0] & 0b00001000) == 0b00001000 )
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word1, 0b10000000);
         }
+        else if ((temp[0] & 0x004f) == 0x0040)
+        {
+           EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0006);
+        }
+        
         if ( (temp[1] & 0b00001000) == 0b00001000 )
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word2, 0b10000000);
+        }
+        else if ((temp[1] & 0x004f) == 0x0040)
+        {
+           EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0006);
         }
         if ( (temp[2] & 0b00001000) == 0b00001000 )
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word3, 0b10000000);
         }
+        else if ((temp[2] & 0x004f) == 0x0040)
+        {
+           EC_WRITE_U16(domain_r_pd+ctrl_word3, 0x0006);
+        }
         if ( (temp[3] & 0b00001000) == 0b00001000 )
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word4, 0b10000000);
+        }
+        else if ((temp[3] & 0x004f) == 0x0040)
+        {
+           EC_WRITE_U16(domain_r_pd+ctrl_word4, 0x0006);
         }
         if ( (temp[4] & 0b00001000) == 0b00001000 )
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word5, 0b10000000);
         }
+        else if ((temp[4] & 0x004f) == 0x0040)
+        {
+           EC_WRITE_U16(domain_r_pd+ctrl_word5, 0x0006);
+        }
         if ( (temp[5] & 0b00001000) == 0b00001000 )
         {
-            EC_WRITE_U16(domain_r_pd+ctrl_word5, 0b10000000);
+            EC_WRITE_U16(domain_r_pd+ctrl_word6, 0b10000000);
+        }
+        else if ((temp[5] & 0x004f) == 0x0040)
+        {
+           EC_WRITE_U16(domain_r_pd+ctrl_word6, 0x0006);
         }
 
-        if (((temp[0] & 0x004f) == 0x0040) & ((temp[1] & 0x004f) == 0x0040) & ((temp[2] & 0x004f) == 0x0040)
-            & ((temp[3] & 0x004f) == 0x0040) & ((temp[4] & 0x004f) == 0x0040) & ((temp[5] & 0x004f) == 0x0040))
-        {
-            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word3, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word4, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word5, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word6, 0x0006);
-            
-        }
-        else if (((temp[0] & 0x006f) == 0x0021) & ((temp[1] & 0x006f) == 0x0021) & ((temp[2] & 0x006f) == 0x0021)
+        if (((temp[0] & 0x006f) == 0x0021) & ((temp[1] & 0x006f) == 0x0021) & ((temp[2] & 0x006f) == 0x0021)
             & ((temp[3] & 0x006f) == 0x0021) & ((temp[4] & 0x006f) == 0x0021) & ((temp[5] & 0x006f) == 0x0021))
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0007);
@@ -443,6 +457,10 @@ void cyclic_task()
             EC_WRITE_U8(domain_r_pd+mode5, 10);
             EC_WRITE_U8(domain_r_pd+mode6, 10);
 
+
+
+
+            // Begin of Controller
             t += 0.001; // increment time for simulation purposes
             move_value =   50 * sin(2 * 3.14159 * 0.5 * t); // simulate a sine wave position
             // move
@@ -453,6 +471,10 @@ void cyclic_task()
             EC_WRITE_S16(domain_r_pd+tar_torq4, move_value); // set target position
             EC_WRITE_S16(domain_r_pd+tar_torq5, move_value); // set target position
             EC_WRITE_S16(domain_r_pd+tar_torq6, move_value); // set target position
+
+
+
+            // End off Controller
 
             EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x001f);
             EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x001f);

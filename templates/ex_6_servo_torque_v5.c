@@ -83,9 +83,6 @@ double t = 0;
 static unsigned int servo_flag =0;
 static unsigned int deactive;
 
-static unsigned int mode_display;
-static unsigned int pos_act;
-
 static unsigned int status_word1;
 static unsigned int status_word2;
 static unsigned int status_word3;
@@ -114,8 +111,31 @@ static unsigned int mode4;
 static unsigned int mode5;
 static unsigned int mode6;
 
+static unsigned int mode_disp1;
+static unsigned int mode_disp2;
+static unsigned int mode_disp3;
+static unsigned int mode_disp4;
+static unsigned int mode_disp5;
+static unsigned int mode_disp6;
+
+static unsigned int pos_act1;
+static unsigned int pos_act2;
+static unsigned int pos_act3;
+static unsigned int pos_act4;
+static unsigned int pos_act5;
+static unsigned int pos_act6;
+
 
 static signed long temp[8]={};
+static signed long mode_disp[8]={};
+static signed int pos_act[8]={};
+
+float rotation1 = 0;
+float rotation2 = 0;
+float rotation3 = 0;    
+float rotation4 = 0;
+float rotation5 = 0;
+float rotation6 = 0;
 
 //rx pdo entry 
 const static ec_pdo_entry_reg_t domain_r_regs[] = 
@@ -153,7 +173,20 @@ const static ec_pdo_entry_reg_t domain_w_regs[] =
         {servo5,servo5_code,0x6041,00,&status_word5},
         {servo6,servo6_code,0x6041,00,&status_word6},
 
-        {servo1,servo1_code,0x6061,00,&mode_display},
+        {servo1,servo1_code,0x6061,00,&mode_disp1},
+        {servo2,servo2_code,0x6061,00,&mode_disp2},
+        {servo3,servo3_code,0x6061,00,&mode_disp3},
+        {servo4,servo4_code,0x6061,00,&mode_disp4},
+        {servo5,servo5_code,0x6061,00,&mode_disp5},
+        {servo6,servo6_code,0x6061,00,&mode_disp6},
+
+        {servo1,servo1_code,0x6064,00,&pos_act1},
+        {servo2,servo2_code,0x6064,00,&pos_act2},
+        {servo3,servo3_code,0x6064,00,&pos_act3},
+        {servo4,servo4_code,0x6064,00,&pos_act4},
+        {servo5,servo5_code,0x6064,00,&pos_act5},
+        {servo6,servo6_code,0x6064,00,&pos_act6},
+        
         {}
 };
 
@@ -188,7 +221,7 @@ ec_pdo_entry_info_t slave_0_pdo_entries[] = {
 
     {0x603f, 0x00, 16}, /* Error code */
     {0x6041, 0x00, 16}, /* Statusword */
-    {0x6064, 0x00, 32}, 
+    {0x6064, 0x00, 32}, /* Actual value */
     {0x6077, 0x00, 16}, /* Torque actual value */
     {0x6061, 0x00, 8},  /* Modes of operation display */
     {0x60b9, 0x00, 16}, /* Touch probe status */
@@ -332,6 +365,7 @@ void cyclic_task()
    		ecrt_domain_process(domain_r);
    		ecrt_domain_process(domain_w);
 
+
         temp[0]=EC_READ_U16(domain_w_pd + status_word1); // read 0x6041
         temp[1]=EC_READ_U16(domain_w_pd + status_word2); // read 0x6041
         temp[2]=EC_READ_U16(domain_w_pd + status_word3); // read 0x6041
@@ -339,7 +373,27 @@ void cyclic_task()
         temp[4]=EC_READ_U16(domain_w_pd + status_word5); // read 0x6041
         temp[5]=EC_READ_U16(domain_w_pd + status_word6); // read 0x6041
 
+        mode_disp[0]=EC_READ_U8(domain_w_pd + mode_disp1); // read 0x6061
+        mode_disp[1]=EC_READ_U8(domain_w_pd + mode_disp2); // read 0x6061
+        mode_disp[2]=EC_READ_U8(domain_w_pd + mode_disp3); // read 0x6061
+        mode_disp[3]=EC_READ_U8(domain_w_pd + mode_disp4); // read 0x6061
+        mode_disp[4]=EC_READ_U8(domain_w_pd + mode_disp5); // read 0x6061
+        mode_disp[5]=EC_READ_U8(domain_w_pd + mode_disp6); // read 0x6061
 
+        pos_act[0]=EC_READ_U32(domain_w_pd + pos_act1); // read 0x6064
+        pos_act[1]=EC_READ_U32(domain_w_pd + pos_act2); // read 0x6064
+        pos_act[2]=EC_READ_U32(domain_w_pd + pos_act3); // read 0x6064
+        pos_act[3]=EC_READ_U32(domain_w_pd + pos_act4); // read 0x6064
+        pos_act[4]=EC_READ_U32(domain_w_pd + pos_act5); // read 0x6064
+        pos_act[5]=EC_READ_U32(domain_w_pd + pos_act6); // read 0x6064
+
+        rotation1 = (float)pos_act[0] / 1048576.0f;     // to rotation
+        rotation2 = (float)pos_act[1] / 1048576.0f;
+        rotation3 = (float)pos_act[2] / 1048576.0f;
+        rotation4 = (float)pos_act[3] / 1048576.0f;
+        rotation5 = (float)pos_act[4] / 1048576.0f;
+        rotation6 = (float)pos_act[5] / 1048576.0f;
+        
 
         if (counter) 
 		{
@@ -361,53 +415,78 @@ void cyclic_task()
             latency_min_ns = 0xffffffff;
             printf("============================\n");
             ec_print_header();
-            ec_print_row_hex("Status",
+            ec_print_row_hex("Status (0x6041)",
                 temp[0], temp[1], temp[2],
                 temp[3], temp[4], temp[5]);
+            ec_print_row_hex("Mode (0x6061)",
+                mode_disp[0], mode_disp[1], mode_disp[2],
+                mode_disp[3], mode_disp[4], mode_disp[5]);
+            ec_print_row_float("Rotation (rounds)",
+                rotation1, rotation2, rotation3,
+                rotation4, rotation5, rotation6);
             ec_print_line();
 #endif
             blink = !blink;
         }
 
 
+        
+
 
         if ( (temp[0] & 0b00001000) == 0b00001000 )
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word1, 0b10000000);
         }
+        else if ((temp[0] & 0x004f) == 0x0040)
+        {
+           EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0006);
+        }
+        
         if ( (temp[1] & 0b00001000) == 0b00001000 )
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word2, 0b10000000);
+        }
+        else if ((temp[1] & 0x004f) == 0x0040)
+        {
+           EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0006);
         }
         if ( (temp[2] & 0b00001000) == 0b00001000 )
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word3, 0b10000000);
         }
+        else if ((temp[2] & 0x004f) == 0x0040)
+        {
+           EC_WRITE_U16(domain_r_pd+ctrl_word3, 0x0006);
+        }
         if ( (temp[3] & 0b00001000) == 0b00001000 )
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word4, 0b10000000);
+        }
+        else if ((temp[3] & 0x004f) == 0x0040)
+        {
+           EC_WRITE_U16(domain_r_pd+ctrl_word4, 0x0006);
         }
         if ( (temp[4] & 0b00001000) == 0b00001000 )
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word5, 0b10000000);
         }
+        else if ((temp[4] & 0x004f) == 0x0040)
+        {
+           EC_WRITE_U16(domain_r_pd+ctrl_word5, 0x0006);
+        }
         if ( (temp[5] & 0b00001000) == 0b00001000 )
         {
-            EC_WRITE_U16(domain_r_pd+ctrl_word5, 0b10000000);
+            EC_WRITE_U16(domain_r_pd+ctrl_word6, 0b10000000);
+        }
+        else if ((temp[5] & 0x004f) == 0x0040)
+        {
+           EC_WRITE_U16(domain_r_pd+ctrl_word6, 0x0006);
         }
 
-        if (((temp[0] & 0x004f) == 0x0040) & ((temp[1] & 0x004f) == 0x0040) & ((temp[2] & 0x004f) == 0x0040)
-            & ((temp[3] & 0x004f) == 0x0040) & ((temp[4] & 0x004f) == 0x0040) & ((temp[5] & 0x004f) == 0x0040))
-        {
-            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word3, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word4, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word5, 0x0006);
-            EC_WRITE_U16(domain_r_pd+ctrl_word6, 0x0006);
-            
-        }
-        else if (((temp[0] & 0x006f) == 0x0021) & ((temp[1] & 0x006f) == 0x0021) & ((temp[2] & 0x006f) == 0x0021)
+
+
+
+        if (((temp[0] & 0x006f) == 0x0021) & ((temp[1] & 0x006f) == 0x0021) & ((temp[2] & 0x006f) == 0x0021)
             & ((temp[3] & 0x006f) == 0x0021) & ((temp[4] & 0x006f) == 0x0021) & ((temp[5] & 0x006f) == 0x0021))
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x0007);
@@ -443,6 +522,8 @@ void cyclic_task()
             EC_WRITE_U8(domain_r_pd+mode5, 10);
             EC_WRITE_U8(domain_r_pd+mode6, 10);
 
+
+            // Begin of Controller
             t += 0.001; // increment time for simulation purposes
             move_value =   50 * sin(2 * 3.14159 * 0.5 * t); // simulate a sine wave position
             // move
@@ -453,6 +534,10 @@ void cyclic_task()
             EC_WRITE_S16(domain_r_pd+tar_torq4, move_value); // set target position
             EC_WRITE_S16(domain_r_pd+tar_torq5, move_value); // set target position
             EC_WRITE_S16(domain_r_pd+tar_torq6, move_value); // set target position
+
+
+
+            // End off Controller
 
             EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x001f);
             EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x001f);

@@ -19,13 +19,12 @@ void ec_clear_console(void) {
 }
 
 void ec_print_line(void) {
-    printf("+--------------+-------------+-------------+-------------+-------------+-------------+-------------+\n");
+    printf("+-------------------+-------------+-------------+-------------+-------------+-------------+-------------+\n");
 }
-
 void ec_print_header(void) {
     printf("Time = %ld\n", time(NULL));
     ec_print_line();
-    printf("|   PDO        |   Servo 1   |   Servo 2   |   Servo 3   |   Servo 4   |   Servo 5   |   Servo 6   |\n");
+    printf("|   PDO             |   Servo 1   |   Servo 2   |   Servo 3   |   Servo 4   |   Servo 5   |   Servo 6   |\n");
     ec_print_line();
 }
 
@@ -33,7 +32,7 @@ void ec_print_row_hex(const char* pdo_name,
                   int d1, int d2, int d3,
                   int d4, int d5, int d6)
 {
-    printf("| %-13s|", pdo_name);
+    printf("| %-19s|", pdo_name);
     printf("   0x%04X    |", d1);
     printf("   0x%04X    |", d2);
     printf("   0x%04X    |", d3);
@@ -47,10 +46,10 @@ void ec_print_row_float(const char* pdo_name,
                         float f4, float f5, float f6)
 {
     printf("| %-13s|", pdo_name);
-    printf(" %10.3f |", f1);
-    printf(" %10.3f |", f2);
-    printf(" %10.3f |", f3);
-    printf(" %10.3f |", f4);
-    printf(" %10.3f |", f5);
-    printf(" %10.3f |\n", f6);
+    printf(" %10.5f  |", f1);
+    printf(" %10.5f  |", f2);
+    printf(" %10.5f  |", f3);
+    printf(" %10.5f  |", f4);
+    printf(" %10.5f  |", f5);
+    printf(" %10.5f  |\n", f6);
 }

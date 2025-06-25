@@ -349,8 +349,6 @@ void cyclic_task()
    		ecrt_domain_process(domain_r);
    		ecrt_domain_process(domain_w);
 
-
-
         temp[0]=EC_READ_U16(domain_w_pd + status_word1); // read 0x6041
         temp[1]=EC_READ_U16(domain_w_pd + status_word2); // read 0x6041
         temp[2]=EC_READ_U16(domain_w_pd + status_word3); // read 0x6041
@@ -367,8 +365,39 @@ void cyclic_task()
 
 
 
+        if (counter) 
+		{
+            counter--;
+        } 	
+		else 
+		{ // do this at 1 Hz
+            counter = FREQUENCY;
+			check_master_state();
+#ifdef MEASURE_TIMING
+            printf("period     %10u ... %10u\n", period_min_ns, period_max_ns);
+            printf("exec       %10u ... %10u\n", exec_min_ns, exec_max_ns);
+            printf("latency    %10u ... %10u\n", latency_min_ns, latency_max_ns);
+            period_max_ns = 0;
+            period_min_ns = 0xffffffff;
+            exec_max_ns = 0;
+            exec_min_ns = 0xffffffff;
+            latency_max_ns = 0;
+            latency_min_ns = 0xffffffff;
+            ec_print_header();
+            ec_print_row_hex("Status",
+                temp[0], temp[1], temp[2],
+                temp[3], temp[4], temp[5]);
+            ec_print_line();
+            
+#endif
+            blink = !blink;
+        }
+
+
+
 
         // First step Switched on ALL servo motors
+
         // for servo 1
         if ( (temp[0] & 0b00001000) == 0b00001000 )
         {
@@ -463,6 +492,7 @@ void cyclic_task()
 
 
 
+
         // Now we turn ON all servo motors at the same time 
 
         if(((temp[0]&0x006f) == 0x0023) & ((temp[1]&0x006f) == 0x0023) & ((temp[2]&0x006f) == 0x0023)
@@ -506,35 +536,6 @@ void cyclic_task()
         // printf("Mode: %d\n", disp_mode)
 
         
-
-        if (counter) 
-		{
-            counter--;
-        } 	
-		else 
-		{ // do this at 1 Hz
-            counter = FREQUENCY;
-			check_master_state();
-#ifdef MEASURE_TIMING
-            ec_clear_console();
-            printf("period     %10u ... %10u\n", period_min_ns, period_max_ns);
-            printf("exec       %10u ... %10u\n", exec_min_ns, exec_max_ns);
-            printf("latency    %10u ... %10u\n", latency_min_ns, latency_max_ns);
-            period_max_ns = 0;
-            period_min_ns = 0xffffffff;
-            exec_max_ns = 0;
-            exec_min_ns = 0xffffffff;
-            latency_max_ns = 0;
-            latency_min_ns = 0xffffffff;
-            ec_print_header();
-            ec_print_row_hex("Status",
-                temp[0], temp[1], temp[2],
-                temp[3], temp[4], temp[5]);
-            ec_print_line();
-            
-#endif
-            blink = !blink;
-        }
 
 		clock_gettime(CLOCK_TO_USE, &time);
 		ecrt_master_application_time(master, TIMESPEC2NS(time));
