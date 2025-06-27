@@ -13,7 +13,7 @@
 #include <malloc.h>
 #include "ecrt.h"
 #include <math.h>
-
+#include <stdbool.h>
 #include <sched.h> /* sched_setscheduler() */
 #include "ec_print.h"
 
@@ -28,6 +28,9 @@
 
 #define MEASURE_TIMING
 
+
+#define WIDTH 32
+#define WINDOW 6
 /****************************************************************************/
 
 #define NSEC_PER_SEC (1000000000L)
@@ -58,13 +61,13 @@ static uint8_t *domain_r_pd = NULL;
 static uint8_t *domain_w_pd = NULL;
 
 #define servo1  		0,0
-#define servo1_code 	0x00000083, 0x00000005
+#define servo1_code 	0x00000083, 0x00000007
 
 #define servo2  		0,1
 #define servo2_code 	0x00000083, 0x00000007
 
 #define servo3  		0,2
-#define servo3_code 	0x00000083, 0x00000007
+#define servo3_code 	0x00000083, 0x00000005
 
 #define servo4  		0,3
 #define servo4_code 	0x00000083, 0x00000005
@@ -75,13 +78,20 @@ static uint8_t *domain_w_pd = NULL;
 #define servo6  		0,5
 #define servo6_code 	0x00000083, 0x00000005
 
+#define ecc  		    0,6
+#define ecc_code 	    0x00000083, 0x000000a6
+
 int demlanlap = 0;
-double t = 0;
+double t = 0.0;
+static uint8_t shift_index = 0;
+static signed int loop_counter; 
 /***************************************************************************/
 
 //signal to turn off servo on state
 static unsigned int servo_flag =0;
 static unsigned int deactive;
+
+StateCode state_code = TURN_DOWN;
 
 static unsigned int status_word1;
 static unsigned int status_word2;
@@ -125,10 +135,28 @@ static unsigned int pos_act4;
 static unsigned int pos_act5;
 static unsigned int pos_act6;
 
+static unsigned int Owrite;
+static signed long Ovalue;
+static unsigned int Iread;
+static signed long Ivalue;
+
+uint8_t down_sensor_pos[6] = {16, 17, 18, 19, 20, 21};
+uint8_t home_sensor_pos[6] = {28, 29, 30, 31, 00, 01};
+uint8_t up_sensor_pos[6] = {22, 23, 24, 25, 26, 27};
 
 static signed long temp[8]={};
 static signed long mode_disp[8]={};
 static signed int pos_act[8]={};
+static signed int pos_offset[8]={0, 0, 0, 0, 0, 0, 0, 0};
+
+float move_value[8];
+bool down_sensor[8];
+bool up_sensor[8];
+bool home_sensor[8];
+
+
+static unsigned int counter = 0;
+static unsigned int blink = 0;
 
 float rotation1 = 0;
 float rotation2 = 0;
@@ -136,6 +164,8 @@ float rotation3 = 0;
 float rotation4 = 0;
 float rotation5 = 0;
 float rotation6 = 0;
+
+bool homing = true;
 
 //rx pdo entry 
 const static ec_pdo_entry_reg_t domain_r_regs[] = 
@@ -160,6 +190,9 @@ const static ec_pdo_entry_reg_t domain_r_regs[] =
         {servo4,servo4_code,0x6071,00,&tar_torq4},
         {servo5,servo5_code,0x6071,00,&tar_torq5},
         {servo6,servo6_code,0x6071,00,&tar_torq6},
+
+        {ecc,ecc_code,0x7003,0x01,&Owrite},
+
         {}
 };
 
@@ -186,6 +219,8 @@ const static ec_pdo_entry_reg_t domain_w_regs[] =
         {servo4,servo4_code,0x6064,00,&pos_act4},
         {servo5,servo5_code,0x6064,00,&pos_act5},
         {servo6,servo6_code,0x6064,00,&pos_act6},
+
+        {ecc,ecc_code,0x6003,0x01,&Iread},     
         
         {}
 };
@@ -193,9 +228,7 @@ const static ec_pdo_entry_reg_t domain_w_regs[] =
 
 
 
-float move_value = 0;
-static unsigned int counter = 0;
-static unsigned int blink = 0;
+
 static unsigned int sync_ref_counter = 0;
 const struct timespec cycletime = {0, PERIOD_NS};
 
@@ -218,6 +251,7 @@ ec_pdo_entry_info_t slave_0_pdo_entries[] = {
     {0x6060, 0x00, 8},  /* Modes of operation */
     {0x60b8, 0x00, 16}, /* Touch probe function */
     {0x607f, 0x00, 32}, 
+    // {0x6098, 0x00, 8},  /* Homing */
 
     {0x603f, 0x00, 16}, /* Error code */
     {0x6041, 0x00, 16}, /* Statusword */
@@ -243,6 +277,39 @@ ec_sync_info_t slave_0_syncs[] = {
     {3, EC_DIR_INPUT, 1, slave_0_pdos + 1, EC_WD_DISABLE},  // TxPDO 1B02h
     {0xff}
 };
+
+
+/* Master 0, Slave 6, "NX-ECC202"
+ * Vendor ID:       0x00000083
+ * Product code:    0x000000a6
+ * Revision number: 0x00010002
+ */
+
+ec_pdo_entry_info_t slave_6_pdo_entries[] = {
+    {0x7003, 0x01, 32},
+    {0x3003, 0x04, 128},
+    {0x3006, 0x04, 128},
+    {0x2002, 0x01, 8},
+    {0x0000, 0x00, 8}, /* Gap */
+    {0x6003, 0x01, 32},
+};
+
+ec_pdo_info_t slave_6_pdos[] = {
+    {0x1604, 1, slave_6_pdo_entries + 0},
+    {0x1bf8, 2, slave_6_pdo_entries + 1},
+    {0x1bff, 1, slave_6_pdo_entries + 3},
+    {0x1bf4, 1, slave_6_pdo_entries + 4},
+    {0x1a00, 1, slave_6_pdo_entries + 5},
+};
+
+ec_sync_info_t slave_6_syncs[] = {
+    {0, EC_DIR_OUTPUT, 0, NULL, EC_WD_DISABLE},
+    {1, EC_DIR_INPUT, 0, NULL, EC_WD_DISABLE},
+    {2, EC_DIR_OUTPUT, 1, slave_6_pdos + 0, EC_WD_ENABLE},
+    {3, EC_DIR_INPUT, 4, slave_6_pdos + 1, EC_WD_DISABLE},
+    {0xff}
+};
+
 
 
 #endif
@@ -387,12 +454,14 @@ void cyclic_task()
         pos_act[4]=EC_READ_U32(domain_w_pd + pos_act5); // read 0x6064
         pos_act[5]=EC_READ_U32(domain_w_pd + pos_act6); // read 0x6064
 
-        rotation1 = (float)pos_act[0] / 1048576.0f;     // to rotation
-        rotation2 = (float)pos_act[1] / 1048576.0f;
-        rotation3 = (float)pos_act[2] / 1048576.0f;
-        rotation4 = (float)pos_act[3] / 1048576.0f;
-        rotation5 = (float)pos_act[4] / 1048576.0f;
-        rotation6 = (float)pos_act[5] / 1048576.0f;
+
+
+        rotation1 = (float)(pos_act[0] + pos_offset[0]) / 1048576.0f;     // to rotation
+        rotation2 = (float)(pos_act[1] + pos_offset[1]) / 1048576.0f;
+        rotation3 = (float)(pos_act[2] + pos_offset[2]) / 1048576.0f;
+        rotation4 = (float)(pos_act[3] + pos_offset[3]) / 1048576.0f;
+        rotation5 = (float)(pos_act[4] + pos_offset[4]) / 1048576.0f;
+        rotation6 = (float)(pos_act[5] + pos_offset[5]) / 1048576.0f;
         
 
         if (counter) 
@@ -401,7 +470,7 @@ void cyclic_task()
         } 	
 		else 
 		{ // do this at 1 Hz
-            counter = FREQUENCY;
+            counter = 100;
 			check_master_state();
 #ifdef MEASURE_TIMING
             printf("period     %10u ... %10u\n", period_min_ns, period_max_ns);
@@ -414,6 +483,7 @@ void cyclic_task()
             latency_max_ns = 0;
             latency_min_ns = 0xffffffff;
             printf("============================\n");
+            printf("Time = %f\n", t);
             ec_print_header();
             ec_print_row_hex("Status (0x6041)",
                 temp[0], temp[1], temp[2],
@@ -424,7 +494,18 @@ void cyclic_task()
             ec_print_row_float("Rotation (rounds)",
                 rotation1, rotation2, rotation3,
                 rotation4, rotation5, rotation6);
+            ec_print_row_bool("Up sensor",
+                up_sensor[0], up_sensor[1], up_sensor[2],
+                up_sensor[3], up_sensor[4], up_sensor[5]);
+            ec_print_row_bool("Home sensor",
+                home_sensor[0], home_sensor[1], home_sensor[2],
+                home_sensor[3], home_sensor[4], home_sensor[5]);
+            ec_print_row_bool("Down sensor",
+                down_sensor[0], down_sensor[1], down_sensor[2],
+                down_sensor[3], down_sensor[4], down_sensor[5]);
             ec_print_line();
+            ec_print_uint32_binary(Ivalue);
+            ec_print_state_code(state_code);
 #endif
             blink = !blink;
         }
@@ -450,6 +531,7 @@ void cyclic_task()
         {
            EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x0006);
         }
+        
         if ( (temp[2] & 0b00001000) == 0b00001000 )
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word3, 0b10000000);
@@ -458,6 +540,7 @@ void cyclic_task()
         {
            EC_WRITE_U16(domain_r_pd+ctrl_word3, 0x0006);
         }
+        
         if ( (temp[3] & 0b00001000) == 0b00001000 )
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word4, 0b10000000);
@@ -466,6 +549,7 @@ void cyclic_task()
         {
            EC_WRITE_U16(domain_r_pd+ctrl_word4, 0x0006);
         }
+        
         if ( (temp[4] & 0b00001000) == 0b00001000 )
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word5, 0b10000000);
@@ -474,6 +558,7 @@ void cyclic_task()
         {
            EC_WRITE_U16(domain_r_pd+ctrl_word5, 0x0006);
         }
+        
         if ( (temp[5] & 0b00001000) == 0b00001000 )
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word6, 0b10000000);
@@ -506,7 +591,7 @@ void cyclic_task()
         else if(((temp[0]&0x006f) == 0x0023) & ((temp[1]&0x006f) == 0x0023) & ((temp[2]&0x006f) == 0x0023)
             & ((temp[3]&0x006f) == 0x0023) & ((temp[4]&0x006f) == 0x0023) & ((temp[5]&0x006f) == 0x0023))
         {
-            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x000f);
+            EC_WRITE_U16(domain_r_pd+ctrl_word1, 0x000f);       /* Turn on all servo*/
             EC_WRITE_U16(domain_r_pd+ctrl_word2, 0x000f);
             EC_WRITE_U16(domain_r_pd+ctrl_word3, 0x000f);
             EC_WRITE_U16(domain_r_pd+ctrl_word4, 0x000f);
@@ -525,17 +610,88 @@ void cyclic_task()
 
             // Begin of Controller
             t += 0.001; // increment time for simulation purposes
-            move_value =   100 * sin(2 * 3.14159 * 5 * t); // simulate a sine wave position
-            // move
+
+
+            if (loop_counter)
+            {
+                loop_counter--;
+            }
+            else
+            {
+                loop_counter = 30;
+                uint32_t pattern = ((1U << WINDOW) - 1) << (WIDTH - WINDOW - shift_index);
+
+                // Write the pattern to the process data
+                EC_WRITE_U32(domain_r_pd + Owrite, pattern);
+
+                // Update the shift index
+                shift_index++;
+                if (shift_index > WIDTH - WINDOW) 
+                {
+                    shift_index = 0;  // Reset to loop back
+                }
+            }
+
+
+            Ivalue = EC_READ_U32(domain_w_pd + Iread); // read the value from the process data
+            // EC_WRITE_U32(domain_r_pd + Owrite, 0xf0f0f0f0); // read the value from the process data
             
-            EC_WRITE_S16(domain_r_pd+tar_torq1, -move_value); // set target position
-            EC_WRITE_S16(domain_r_pd+tar_torq2, move_value); // set target position
-            EC_WRITE_S16(domain_r_pd+tar_torq3, move_value); // set target position
-            EC_WRITE_S16(domain_r_pd+tar_torq4, move_value); // set target position
-            EC_WRITE_S16(domain_r_pd+tar_torq5, move_value); // set target position
-            EC_WRITE_S16(domain_r_pd+tar_torq6, move_value); // set target position
+            for (int i = 0; i < 6; i ++)
+            {
+                uint32_t down_check = Ivalue >> i;
+                uint32_t home_check = Ivalue >> (i + 6);
+                uint32_t up_check = Ivalue >> (i + 12);
+                down_sensor[i] = down_check & 0x1;
+                home_sensor[i] = home_check & 0x1;
+                up_sensor[i] = up_check & 0x1;
+            }
+           
 
 
+            // State machine for homing setup and operation preparation
+            switch (state_code)
+            {
+            case TURN_DOWN:
+                for (int i = 0; i < 6; i++)
+                {
+                    if (down_sensor[i] == 0x00000001)
+                    {
+                        pos_offset[i] = -pos_act[i];
+                        move_value[i] = 0;
+                    }
+                    else
+                    {
+                        move_value[i] =   50 * sin(2 * 3.14159 * 0.5 * t); // simulate a sine wave position
+                    }
+                    
+                }
+                if (down_sensor[0] & down_sensor[1] & down_sensor[2] & down_sensor[3] & down_sensor[4] & down_sensor[5])
+                {
+                    state_code = GO_HOME;
+                }
+                break;
+            
+
+            case GO_HOME:
+                for (int i = 0; i < 6; i++)
+                    move_value[i] = 0;
+
+            default:
+                break;
+            }
+
+
+            if (homing)
+            {
+                
+            }
+
+            EC_WRITE_S16(domain_r_pd+tar_torq1, move_value[0]); // set target position
+            EC_WRITE_S16(domain_r_pd+tar_torq2, move_value[1]); // set target position
+            EC_WRITE_S16(domain_r_pd+tar_torq3, move_value[2]); // set target position
+            EC_WRITE_S16(domain_r_pd+tar_torq4, move_value[3]); // set target position
+            EC_WRITE_S16(domain_r_pd+tar_torq5, move_value[4]); // set target position
+            EC_WRITE_S16(domain_r_pd+tar_torq6, move_value[5]); // set target position
 
             // End off Controller
 
@@ -688,7 +844,7 @@ int main(int argc, char **argv)
     }
 
     if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
-{
+    {
         return -1;
     }
 
@@ -740,7 +896,7 @@ int main(int argc, char **argv)
     }
 
     if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
-{
+    {
         return -1;
     }
 
@@ -791,7 +947,7 @@ int main(int argc, char **argv)
     }
 
     if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
-{
+    {
         return -1;
     }
 
@@ -844,7 +1000,7 @@ int main(int argc, char **argv)
     }
 
     if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
-{
+    {
         return -1;
     }
 
@@ -894,7 +1050,7 @@ int main(int argc, char **argv)
     }
 
     if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
-{
+    {
         return -1;
     }
 
@@ -926,6 +1082,29 @@ int main(int argc, char **argv)
         return -1;
     }
 
+
+    ecrt_slave_config_dc(sc,
+        0x0300,
+        1000000,4400000,0,0);  
+
+
+
+
+    // setup IO
+    // ==========================================================================
+    if (!(sc = ecrt_master_slave_config(master, ecc, ecc_code))) 
+    {
+	fprintf(stderr, "Failed to get slave1 configuration.\n");
+        return -1;
+    }  
+
+    printf("Configuring PDOs 1...\n");
+	
+    if (ecrt_slave_config_pdos(sc, EC_END, slave_6_syncs)) 
+    {
+        fprintf(stderr, "Failed to configure PDOs 1.\n");
+        return -1;
+    }
 
     ecrt_slave_config_dc(sc,
         0x0300,

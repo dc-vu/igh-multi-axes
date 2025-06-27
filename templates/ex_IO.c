@@ -60,7 +60,7 @@ static ec_slave_config_state_t sc_state = {};
 static uint8_t *domain_r_pd = NULL;
 static uint8_t *domain_w_pd = NULL;
 
-#define ecc  		0,0
+#define ecc  		0,6
 #define ecc_code 	0x00000083, 0x000000a6
 
 int demlanlap = 0;

@@ -80,7 +80,7 @@ double t = 0;
 /***************************************************************************/
 
 //signal to turn off servo on state
-static unsigned int servo_flag =0;
+static unsigned int servo_flag = 0;
 static unsigned int deactive;
 
 static unsigned int status_word1;
@@ -159,7 +159,7 @@ const static ec_pdo_entry_reg_t domain_r_regs[] =
         {servo3,servo3_code,0x6071,00,&tar_torq3},
         {servo4,servo4_code,0x6071,00,&tar_torq4},
         {servo5,servo5_code,0x6071,00,&tar_torq5},
-        {servo6,servo6_code,0x6071,00,&tar_torq6},
+        {servo6,servo6_code,0x607a,00,&tar_torq6},  //pos
         {}
 };
 
@@ -194,6 +194,7 @@ const static ec_pdo_entry_reg_t domain_w_regs[] =
 
 
 float move_value = 0;
+float move_value_pos = 0;
 static unsigned int counter = 0;
 static unsigned int blink = 0;
 static unsigned int sync_ref_counter = 0;
@@ -433,7 +434,7 @@ void cyclic_task()
         
 
 
-        if ( (temp[0] & 0b00001000) == 0b00001000 )
+        if ( (temp[0] & 0b00001000) == 0b00001000)
         {
             EC_WRITE_U16(domain_r_pd+ctrl_word1, 0b10000000);
         }
@@ -501,7 +502,7 @@ void cyclic_task()
             EC_WRITE_U8(domain_r_pd+mode3, 10);
             EC_WRITE_U8(domain_r_pd+mode4, 10);
             EC_WRITE_U8(domain_r_pd+mode5, 10);
-            EC_WRITE_U8(domain_r_pd+mode6, 10);
+            EC_WRITE_U8(domain_r_pd+mode6, 8);
         }
         else if(((temp[0]&0x006f) == 0x0023) & ((temp[1]&0x006f) == 0x0023) & ((temp[2]&0x006f) == 0x0023)
             & ((temp[3]&0x006f) == 0x0023) & ((temp[4]&0x006f) == 0x0023) & ((temp[5]&0x006f) == 0x0023))
@@ -520,12 +521,13 @@ void cyclic_task()
             EC_WRITE_U8(domain_r_pd+mode3, 10);
             EC_WRITE_U8(domain_r_pd+mode4, 10);
             EC_WRITE_U8(domain_r_pd+mode5, 10);
-            EC_WRITE_U8(domain_r_pd+mode6, 10);
+            EC_WRITE_U8(domain_r_pd+mode6, 8);
 
 
             // Begin of Controller
             t += 0.001; // increment time for simulation purposes
-            move_value =   100 * sin(2 * 3.14159 * 5 * t); // simulate a sine wave position
+            move_value =   100 * sin(2 * 3.14159 * 5 * t);
+            move_value_pos =   1000000 * sin(2 * 3.14159 * 0.5 * t);  // simulate a sine wave position
             // move
             
             EC_WRITE_S16(domain_r_pd+tar_torq1, -move_value); // set target position
@@ -533,7 +535,7 @@ void cyclic_task()
             EC_WRITE_S16(domain_r_pd+tar_torq3, move_value); // set target position
             EC_WRITE_S16(domain_r_pd+tar_torq4, move_value); // set target position
             EC_WRITE_S16(domain_r_pd+tar_torq5, move_value); // set target position
-            EC_WRITE_S16(domain_r_pd+tar_torq6, move_value); // set target position
+            EC_WRITE_S32(domain_r_pd+tar_torq6, move_value_pos); // set target position
 
 
 
@@ -888,7 +890,7 @@ int main(int argc, char **argv)
         return -1;
     }  
     
-    if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))        // PDO mapping 0x1600 by 0x1C12
+        if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))        // PDO mapping 0x1600 by 0x1C12
     {
         return -1;
     }
