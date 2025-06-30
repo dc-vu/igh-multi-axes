@@ -79,7 +79,7 @@ static uint8_t *domain_w_pd = NULL;
 #define servo6_code 	0x00000083, 0x000000ae
 
 #define ecc  		    0,7
-#define ecc_code 	    0x00000083, 0x000000ae
+#define ecc_code 	    0x00000083, 0x000000a6
 
 int demlanlap = 0;
 double t = 0.0;
@@ -519,6 +519,9 @@ void cyclic_task()
             ec_print_row_float("Rotation (rounds)",
                 rotation1, rotation2, rotation3,
                 rotation4, rotation5, rotation6);
+            ec_print_row_float("Command value",
+                move_value[0], move_value[1], move_value[2],
+                move_value[3], move_value[4], move_value[5]);
             ec_print_row_bool("Up sensor",
                 up_sensor[0], up_sensor[1], up_sensor[2],
                 up_sensor[3], up_sensor[4], up_sensor[5]);
@@ -722,7 +725,7 @@ void cyclic_task()
                     }
                     else
                     {
-                        move_value[i] =   50 * sin(2 * 3.14159 * 0.5 * t); // simulate a sine wave position
+                        move_value[i] =  200; // simulate a sine wave position
                     }
                     
                 }
@@ -933,35 +936,35 @@ int main(int argc, char **argv)
         return -1;
     }  
     
-    if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))        // PDO mapping 0x1600 by 0x1C12
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))        // PDO mapping 0x1600 by 0x1C12
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo16(sc, 0x3317, 00, 0))             // PDO mapping 0x1600 by 0x1C12
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x3317, 00, 0))             // PDO mapping 0x1600 by 0x1C12
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))       // speed limit selection
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))       // speed limit selection
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))     // setting following error window
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))     // setting following error window
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x607f, 0, 1000000000))     // setting max profile velocity
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x607f, 0, 1000000000))     // setting max profile velocity
+    // {
+    //     return -1;
+    // }
 
     printf("Configuring PDOs 1...\n");
 	
@@ -984,35 +987,35 @@ int main(int argc, char **argv)
         return -1;
     }  
     
-    if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))        // PDO mapping 0x1600 by 0x1C12
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))        // PDO mapping 0x1600 by 0x1C12
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo16(sc, 0x3317, 00, 0))             // PDO mapping 0x1600 by 0x1C12
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x3317, 00, 0))             // PDO mapping 0x1600 by 0x1C12
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))       // speed limit selection
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))       // speed limit selection
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))     // setting following error window
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))     // setting following error window
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x607f, 0, 1000000000))     // setting max profile velocity
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x607f, 0, 1000000000))     // setting max profile velocity
+    // {
+    //     return -1;
+    // }
 
     printf("Configuring PDOs 2...\n");
 	
@@ -1036,35 +1039,35 @@ int main(int argc, char **argv)
         return -1;
     }  
     
-    if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))        // PDO mapping 0x1600 by 0x1C12
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))        // PDO mapping 0x1600 by 0x1C12
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo16(sc, 0x3317, 00, 0))             // PDO mapping 0x1600 by 0x1C12
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x3317, 00, 0))             // PDO mapping 0x1600 by 0x1C12
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))       // speed limit selection
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))       // speed limit selection
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))     // setting following error window
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))     // setting following error window
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x607f, 0, 1000000000))     // setting max profile velocity
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x607f, 0, 1000000000))     // setting max profile velocity
+    // {
+    //     return -1;
+    // }
 
 
     printf("Configuring PDOs 3...\n");
@@ -1087,35 +1090,35 @@ int main(int argc, char **argv)
         return -1;
     }  
     
-    if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))        // PDO mapping 0x1600 by 0x1C12
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))        // PDO mapping 0x1600 by 0x1C12
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo16(sc, 0x3317, 00, 0))             // PDO mapping 0x1600 by 0x1C12
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x3317, 00, 0))             // PDO mapping 0x1600 by 0x1C12
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))       // speed limit selection
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))       // speed limit selection
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))     // setting following error window
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))     // setting following error window
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x607f, 0, 1000000000))     // setting max profile velocity
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x607f, 0, 1000000000))     // setting max profile velocity
+    // {
+    //     return -1;
+    // }
 
     printf("Configuring PDOs 4...\n");
 	
@@ -1140,43 +1143,43 @@ int main(int argc, char **argv)
         return -1;
     }  
     
-    if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))        // PDO mapping 0x1600 by 0x1C12
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))        // PDO mapping 0x1600 by 0x1C12
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo16(sc, 0x3317, 00, 0))             // PDO mapping 0x1600 by 0x1C12
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x3317, 00, 0))             // PDO mapping 0x1600 by 0x1C12
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))       // speed limit selection
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))       // speed limit selection
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))     // setting following error window
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))     // setting following error window
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x607f, 0, 1000000000))     // setting max profile velocity
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x607f, 0, 1000000000))     // setting max profile velocity
+    // {
+    //     return -1;
+    // }
 
-    printf("Configuring PDOs 5...\n");
+    // printf("Configuring PDOs 5...\n");
 	
-    if (ecrt_slave_config_pdos(sc, EC_END, slave_0_syncs)) 
-    {
-        fprintf(stderr, "Failed to configure PDOs 5.\n");
-        return -1;
-    }
+    // if (ecrt_slave_config_pdos(sc, EC_END, slave_0_syncs)) 
+    // {
+    //     fprintf(stderr, "Failed to configure PDOs 5.\n");
+    //     return -1;
+    // }
 
     ecrt_slave_config_dc(sc,
         0x0300,
@@ -1190,35 +1193,35 @@ int main(int argc, char **argv)
         return -1;
     }  
     
-    if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))        // PDO mapping 0x1600 by 0x1C12
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))        // PDO mapping 0x1600 by 0x1C12
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))        // PDO mapping 0x1A00 by 0x1C13
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo16(sc, 0x3317, 00, 0))             // PDO mapping 0x1600 by 0x1C12
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x3317, 00, 0))             // PDO mapping 0x1600 by 0x1C12
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))       // speed limit selection
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))       // speed limit selection
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))     // setting following error window
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))     // setting following error window
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x607f, 0, 1000000000))     // setting max profile velocity
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x607f, 0, 1000000000))     // setting max profile velocity
+    // {
+    //     return -1;
+    // }
 
     printf("Configuring PDOs 6...\n");
 	

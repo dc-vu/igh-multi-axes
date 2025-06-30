@@ -57,7 +57,7 @@ static ec_slave_config_state_t sc_state = {};
 static uint8_t *domain_r_pd = NULL;
 static uint8_t *domain_w_pd = NULL;
 #define servo1  		0,0
-#define servo1_code 	0x00000083, 0x00000007
+#define servo1_code 	0x00000083, 0x000000ae
 
 int demlanlap = 0;
 double t = 0;
@@ -448,30 +448,30 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1600))
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1A00))
+    // {
+    //     return -1;
+    // }
 
-        if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))
-    {
-        return -1;
-    }
+    //     if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))
+    // {
+    //     return -1;
+    // }
     // static uint8_t sdo_value;
     // size_t result_size;
     // uint32_t abort_code;

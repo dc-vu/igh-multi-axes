@@ -20,10 +20,10 @@
 // Application parameters
 #define FREQUENCY 1000
 #define CLOCK_TO_USE CLOCK_REALTIME
-#define CONFIGURE_PDOS 0
+#define CONFIGURE_PDOS 1
 
 // Optional features
-#define PDO_SETTING	0
+#define PDO_SETTING	1
 #define SDO_ACCESS      1
 
 #define MEASURE_TIMING
@@ -56,8 +56,8 @@ static ec_slave_config_state_t sc_state = {};
 // process data
 static uint8_t *domain_r_pd = NULL;
 static uint8_t *domain_w_pd = NULL;
-#define servo1  		0,4
-#define servo1_code 	0x00000083, 0x00000005
+#define servo1  		0,2
+#define servo1_code 	0x00000083, 0x000000ae
 
 int demlanlap = 0;
 double t = 0;
@@ -153,8 +153,8 @@ const struct timespec cycletime = {0, PERIOD_NS};
 };
 
 ec_pdo_info_t slave_0_pdos[] = {
-    {0x1701, 4, slave_0_pdo_entries + 0}, /* 258th receive PDO Mapping */
-    {0x1b01, 9, slave_0_pdo_entries + 4}, /* 258th transmit PDO Mapping */
+    {0x1600, 4, slave_0_pdo_entries + 0}, /* 258th receive PDO Mapping */
+    {0x1a00, 9, slave_0_pdo_entries + 4}, /* 258th transmit PDO Mapping */
 };
 
 ec_sync_info_t slave_0_syncs[] = {
@@ -350,7 +350,7 @@ void cyclic_task()
         else if( (temp[0]&0x006f) == 0x0027)        // this servo is on
 		{
             t += 0.001; // increment time for simulation purposes
-            move_value =   700000 * sin(2 * 3.14159 * 0.5 * t); // simulate a sine wave position
+            move_value =   10000000 * sin(2 * 3.14159 * 0.5 * t); // simulate a sine wave position
             // move
             
             EC_WRITE_S32(domain_r_pd+tar_pos, move_value); // set target position
@@ -442,25 +442,25 @@ int main(int argc, char **argv)
         return -1;
     }
 
-        if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))
-    {
-        return -1;
-    }
+    //     if (ecrt_slave_config_sdo32(sc, 0x3328, 0, 16000000))
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))
+    // {
+    //     return -1;
+    // }
 
-        if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1702))
-    {
-        return -1;
-    }
+    //     if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1702))
+    // {
+    //     return -1;
+    // }
 
-    if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1B02))
-    {
-        return -1;
-    }
+    // if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1B02))
+    // {
+    //     return -1;
+    // }
 
     // static uint8_t sdo_value;
     // size_t result_size;
