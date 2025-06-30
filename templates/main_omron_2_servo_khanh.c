@@ -141,7 +141,7 @@ ec_pdo_entry_reg_t domain2_regs[] = {
     {0x6040, 0x00, 16}, /* Controlword */
     {0x607a, 0x00, 32}, /* Target position */
     {0x60b8, 0x00, 16}, /* Touch probe function */
-    {0x60fe, 0x01, 32}, /* Physical outputs */
+    {0x60fe, 0x01, 32}, /* Digital outputs */
     {0x603f, 0x00, 16}, /* Error code */
     {0x6041, 0x00, 16}, /* Statusword */
     {0x6064, 0x00, 32}, /* Position actual value */
