@@ -481,15 +481,15 @@ int main(int argc, char **argv)
     //     return -1;
     // }
 
-    // if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1602))
-    // {
-    //     return -1;
-    // }
+    if (ecrt_slave_config_sdo16(sc, 0x1C12, 01, 0x1602))
+    {
+        return -1;
+    }
 
-    // if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1a02))
-    // {
-    //     return -1;
-    // }
+    if (ecrt_slave_config_sdo16(sc, 0x1C13, 01, 0x1a02))
+    {
+        return -1;
+    }
 
     // if (ecrt_slave_config_sdo16(sc, 0x6073, 00, 3000))
     // {
@@ -512,7 +512,7 @@ int main(int argc, char **argv)
  
 // #if CONFIGURE_PDOS
 
-    printf("Configuring PDOs...\n");
+    // printf("Configuring PDOs...\n");
 	
     if (ecrt_slave_config_pdos(sc, EC_END, slave_0_syncs)) 
     {
