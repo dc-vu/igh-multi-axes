@@ -4,7 +4,7 @@ CC = gcc
 CFLAGS = -I/opt/etherlab/include -Ilib -O2
 LDFLAGS = -L/opt/etherlab/lib -lethercat -Wl,--rpath -Wl,/opt/etherlab/lib -lm
 
-TARGET = build/ex_servo_erob_v3
+TARGET = build/ex_servo_erob_v2
 
 # SRC = main_test_omron.c
 # SRC = templates/main_omron_2_servo.c
@@ -31,7 +31,7 @@ TARGET = build/ex_servo_erob_v3
 
 # SRC = src/ec_print.c templates/ex_6_servo_state_machine_v3.c
 
-SRC = src/ec_print.c templates/ex_servo_erob_v3.c
+SRC = src/ec_print.c templates/ex_servo_erob_v2.c
 
 all: $(TARGET)
 

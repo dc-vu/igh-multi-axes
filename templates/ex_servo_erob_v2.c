@@ -26,7 +26,7 @@
 #define PDO_SETTING	    0
 #define SDO_ACCESS      1
 
-#define MEASURE_TIMING
+// #define MEASURE_TIMING
 
 /****************************************************************************/
 
@@ -125,7 +125,7 @@ const static ec_pdo_entry_reg_t domain_w_regs[] =
 
 
 
-float move_value = 0;
+uint32_t move_value = 0;
 static unsigned int counter = 0;
 static unsigned int blink = 0;
 static unsigned int sync_ref_counter = 0;
@@ -294,6 +294,7 @@ void cyclic_task()
         temp[0]=EC_READ_U16(domain_w_pd + status_word);
 
         actual_pos = EC_READ_S32(domain_w_pd + pos_act);
+
         if ((read_offset == 1) || (offsets == 0))
         {
             offsets = actual_pos;
@@ -327,12 +328,16 @@ void cyclic_task()
 
 		// write process data
 
-        if ((((temp[0] & 0b00001000) == 0b00001000)) && (t < 1))
+        if ((((temp[0] & 0b00001000) == 0b00001000)))
         {
-            EC_WRITE_U16(domain_r_pd+ctrl_word, 0b10000000);
-            printf("Error");
-            printf("     0x%04X  |\n", temp[0]);
-            EC_WRITE_U8(domain_r_pd+mode, 0);
+            if  (t < 1)
+            {
+                EC_WRITE_U16(domain_r_pd+ctrl_word, 0b10000000);
+            }
+            
+            // printf("Error");
+            // printf("     0x%04X  |\n", temp[0]);
+            // EC_WRITE_U8(domain_r_pd+mode, 0);
         }
         else if(servo_flag==1)
 		{
@@ -370,19 +375,22 @@ void cyclic_task()
         }
 		
 		//operation enabled
-        else if( (temp[0]&0x006f) == 0x0027)        // this servo is on
-		{
-            // printf("Servo state 4\n");
-            // printf("     0x%04X  |\n", temp[0]);
-            t += 0.001; // increment time for simulation purposes
-            move_value =  offsets + 0000 * sin(2 * 3.14159 * 0.1 * t); // simulate a sine wave position
-            // move
-            // move_value = 0;
-            EC_WRITE_S32(domain_r_pd+tar_pos, move_value); // set target position
-            EC_WRITE_U16(domain_r_pd+ctrl_word, 0x001f);
-            // printf("Servo state 4\n");
 
-        }
+        // else if( (temp[0]&0x006f) == 0x0027)        // this servo is on
+		// {
+        //     // printf("Servo state 4\n");
+        //     // printf("     0x%04X  |\n", temp[0]);
+        //     t += 0.001; // increment time for simulation purposes
+        //     move_value =  offsets; // simulate a sine wave position
+        //     // move
+        //     // move_value = 0;
+        //     EC_WRITE_S32(domain_r_pd+tar_pos, move_value); // set target position
+        //     EC_WRITE_U16(domain_r_pd+ctrl_word, 0x001f);
+
+        //     printf("Offset: %d, Move value: %d, Actual pos: %d\n", offsets, move_value, actual_pos);
+        //     // printf("Servo state 4\n");
+
+        // }
 
         // temp[1]=EC_READ_U32(domain_w_pd + pos_act);
         // printf("Position actual value: %ld\n", temp[1]);
@@ -473,10 +481,11 @@ int main(int argc, char **argv)
     //     return -1;
     // }
 
-    // if (ecrt_slave_config_sdo32(sc, 0x6065, 0, 0xFFFFFFFF))
+    // if (ecrt_slave_config_sdo32(sc, 0x4602, 0, 1))
     // {
     //     return -1;
     // }
+
 
 
 
